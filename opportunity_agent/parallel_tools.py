@@ -14,10 +14,11 @@ See: https://docs.parallel.ai/integrations/mcp/search-mcp
 
 import os
 
-from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StreamableHTTPConnectionParams
+from google.adk.tools.mcp_tool.mcp_toolset import McpToolset, StreamableHTTPConnectionParams
 
 
-def get_parallel_mcp_tools() -> MCPToolset:
+
+def get_parallel_mcp_tools() -> McpToolset:
     """
     Return an MCPToolset connected to the Parallel Search MCP server.
 
@@ -35,4 +36,4 @@ def get_parallel_mcp_tools() -> MCPToolset:
         headers=headers,
     )
 
-    return MCPToolset(connection_params=connection_params)
+    return McpToolset(connection_params=connection_params)

@@ -1,3 +1,4 @@
 google-adk>=1.18.0
-parallel-web
-python-dotenv
+python
+mcp>=1.24,<2
+

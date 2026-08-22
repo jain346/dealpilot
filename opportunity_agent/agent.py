@@ -89,7 +89,7 @@ by fit and urgency.
 """
 
 root_agent = Agent(
-    model="gemini-2.0-flash",
+    model="gemini-3.6-flash",
     name="opportunity_agent",
     description=(
         "Discovers sponsorship, partnership, and brand deal opportunities "
