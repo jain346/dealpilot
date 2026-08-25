@@ -1,0 +1,4 @@
+mcp>=1.24,<2
+google-adk>=1.18.0
+python
+
