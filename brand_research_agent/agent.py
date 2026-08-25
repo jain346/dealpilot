@@ -210,7 +210,7 @@ root_agent = Agent(
         "Deeply researches a specific company using current web "
         "intelligence and returns evidence-backed brand intelligence."
     ),    
-    
+    mode ="single_turn",
     instruction=BRAND_RESEARCH_INSTRUCTION,
     input_schema=BrandResearchInput,
     output_schema=BrandResearchOutput,
