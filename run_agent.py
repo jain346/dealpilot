@@ -8,7 +8,7 @@ from google.genai import types
 
 
 # Import the root agent exported by the project
-from agent1 import root_agent
+from agent import root_agent
 
 
 # ADK orchestrates function calls itself, but google-genai emits this advisory
