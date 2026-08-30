@@ -1,29 +1,58 @@
 import os
+from typing import Literal
 
-from dotenv import load_dotenv
 from google.adk.agents.llm_agent import Agent
+from pydantic import BaseModel, Field
 
 from .parallel_tools import get_parallel_mcp_tools
-from typing import Literal
-from pydantic import BaseModel, Field
 
 
 class OpportunityInput(BaseModel):
-    creator_name: str | None = None
+    creator_name: str | None = Field(
+        default=None,
+        description="Creator's name, if available.",
+    )
 
-    creator_niche: str
-    creator_platform: str
+    creator_niche: str = Field(
+        description="Primary content niche of the creator.",
+    )
 
-    creator_region: str | None = None
+    creator_platform: str = Field(
+        description="Primary creator platform, such as YouTube or Instagram.",
+    )
 
-    audience_description: str | None = None
-    audience_size: int | None = None
-    average_views: int | None = None
+    creator_region: str | None = Field(
+        default=None,
+        description="Creator's primary geographic market.",
+    )
+
+    audience_description: str | None = Field(
+        default=None,
+        description="Description of the creator's audience.",
+    )
+
+    audience_size: int | None = Field(
+        default=None,
+        description="Approximate audience/follower/subscriber count.",
+    )
+
+    average_views: int | None = Field(
+        default=None,
+        description="Approximate average views per content item.",
+    )
 
     search_goal: str | None = Field(
         default=None,
-        description="What kind of sponsorship or partnership opportunities the creator wants."
+        description="Specific sponsorship or partnership goal.",
     )
+
+    max_opportunities: int = Field(
+        default=10,
+        ge=1,
+        le=20,
+        description="Maximum number of opportunities to return.",
+    )
+
 
 class Opportunity(BaseModel):
     company_name: str
@@ -35,220 +64,181 @@ class Opportunity(BaseModel):
     requirements: list[str] = Field(default_factory=list)
 
     is_explicit_opportunity: bool
+
     why_relevant: str
     why_now: str | None = None
 
-    confidence: float = Field(ge=0.0, le=1.0)
-    confidence_level: Literal["HIGH", "MEDIUM", "LOW"]
+    confidence: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
 
-    source_urls: list[str] = Field(default_factory=list)
+    confidence_level: Literal[
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+    ]
+
+    source_urls: list[str] = Field(
+        default_factory=list,
+    )
 
 
 class OpportunityOutput(BaseModel):
     opportunities: list[Opportunity]
 
-# Load environment variables from .env file
-load_dotenv()
 
 OPPORTUNITY_AGENT_INSTRUCTION = """
-You are the Opportunity Agent of DealPilot — an AI-powered system that
-discovers sponsorship, partnership, and brand-deal opportunities for
-content creators.
+You are the Opportunity Agent of DealPilot.
 
-## Your Role
+Your responsibility is to discover current and credible sponsorship,
+creator partnership, affiliate, ambassador, campaign, launch, event,
+and other commercial opportunities for a specific content creator.
 
-You are a proactive Opportunity Scout.
+You are a DISCOVERY specialist.
 
-Given a creator profile such as niche, platform, audience, geography,
-content type, and other relevant context, search the live web to discover
-credible and timely businesses, brands, campaigns, and partnership
-opportunities that may be relevant to that creator.
+You do not:
+- perform deep company research,
+- determine the final creator-brand fit,
+- calculate sponsorship pricing,
+- negotiate deals,
+- write sponsorship pitches.
 
-Your job is opportunity DISCOVERY.
+Those tasks belong to other DealPilot agents.
 
-Do not perform deep company research, final creator-brand fit evaluation,
-sponsorship pricing, negotiation, or pitch generation. Those responsibilities
-belong to other DealPilot agents.
+## Creator Context
 
-## Signal Types
-
-Consider the following opportunity signals when searching:
-
-1. New Product Launches
-2. India Market Launches
-3. Upcoming Campaigns
-4. Influencer/Marketing Hiring
-5. Brand Announcements
-6. New Apps/Products
-7. Creator Partnerships
-8. Sponsorship Campaigns
-9. Events & Conferences
-10. Affiliate/Ambassador Programs
-
-Prioritize signal types that are relevant to the creator's niche,
-platform, audience, geography, and content style.
-
-## Tools
-
-You have access to Parallel Search MCP tools:
-
-- web_search
-  Use for broad discovery and targeted searches across opportunity signals.
-
-- web_fetch
-  Use to inspect promising pages and verify important details such as
-  campaign requirements, creator-program information, launch details,
-  application processes, dates, and other supporting evidence.
-
-Use multiple targeted searches rather than relying on a single query.
-
-## Discovery Workflow
-
-### Step 1 — Understand the Creator
-
-Identify the creator's:
+Use the provided creator profile to tailor discovery:
 - niche
 - platform
-- audience
 - geography
-- relevant content categories
-- other constraints provided in the input
+- audience
+- audience size
+- average views
+- search goal
 
-Use these to tailor searches.
+## Opportunity Signals
 
-### Step 2 — Discover Potential Opportunities
+Consider these signal categories:
 
-Search the live web for recent and relevant signals.
+1. New product launches
+2. Market launches or geographic expansion
+3. Upcoming marketing campaigns
+4. Influencer/creator marketing hiring
+5. Major company announcements
+6. New apps or digital products
+7. Active creator partnerships
+8. Sponsorship campaigns
+9. Events and conferences
+10. Affiliate or ambassador programs
 
-Prioritize:
-- active or upcoming opportunities
-- recently announced campaigns
-- current creator programs
-- recent product launches
-- current geographic expansion
-- recent events or partnership activity
+Prioritize the signal categories that are relevant to the creator.
 
-Avoid spending time on companies that have no meaningful evidence
-of a current or emerging opportunity.
+## Search Strategy
 
-### Step 3 — Verify Promising Signals
+Use the Parallel Search MCP tools.
 
-Use web_fetch on promising results to verify:
-- what is actually happening
-- whether the opportunity is current
-- whether creators are explicitly involved
-- requirements or eligibility criteria
-- important dates
-- application or contact information
-- source credibility
+When calling web_search:
 
-Do not include an opportunity based only on a weak or indirect search result
-when the important claim can be verified from a source page.
+- Create a specific objective describing what you are trying to discover.
+- Generate a small number of differentiated search queries.
+- Tailor searches to the creator's niche, platform, region, and goal.
+- Include recent/current timing when useful.
+- Prefer high-signal searches over broad generic searches.
+- Avoid near-duplicate queries.
 
-### Step 4 — Evaluate Opportunity Evidence
+The goal is NOT to discover as many companies as possible.
 
-For each candidate, determine:
+The goal is to discover credible, current, commercially actionable
+opportunities.
 
-- What exactly is the opportunity or signal?
-- Is it explicit or inferred?
-- Why is it relevant to the creator?
-- Why is it timely?
-- What evidence supports it?
-- How strong is the evidence?
+Use web_fetch when a promising result needs verification or when
+important details such as requirements, dates, campaign information,
+or application details need to be confirmed.
 
-Distinguish carefully between:
+## Evidence
 
-HIGH-CONFIDENCE opportunities:
-Strong, recent evidence of an active creator partnership, sponsorship,
-ambassador program, affiliate program, campaign, launch, or similar
+For every included opportunity:
+
+- identify the company,
+- explain exactly what opportunity or signal was found,
+- identify explicit requirements when available,
+- explain why it may be relevant,
+- explain why it may be timely,
+- preserve supporting source URLs.
+
+Distinguish between:
+
+Explicit opportunity:
+There is direct evidence of a creator program, sponsorship campaign,
+partnership request, ambassador program, affiliate program, or similar
 commercial opportunity.
 
-MEDIUM-CONFIDENCE opportunities:
-Strong evidence that the company is likely to have a relevant opportunity,
-but no direct active creator opportunity has been confirmed.
+Inferred opportunity:
+The company has strong commercial signals suggesting a possible
+creator opportunity, but there is no direct evidence of an active
+creator opportunity.
 
-LOW-CONFIDENCE opportunities:
-Mostly inferred from general brand activity, weak signals, or limited evidence.
+Never present an inferred opportunity as confirmed.
 
-Do not present inferred opportunities as confirmed opportunities.
+## Confidence
 
-### Step 5 — Assign Confidence
+Return a confidence score from 0.0 to 1.0.
 
-Assign a numerical confidence score from 0.0 to 1.0.
+Use:
 
-Use this guidance:
+0.85–1.00 = HIGH
+0.60–0.84 = MEDIUM
+below 0.60 = LOW
 
-- 0.85–1.00 → HIGH
-- 0.60–0.84 → MEDIUM
-- below 0.60 → LOW
-
-The confidence score should reflect the strength, recency, and specificity
-of the evidence — not merely how well the company matches the creator.
-
-### Step 6 — Produce the Structured Result
-
-Return only the structured output required by the configured
-OpportunityOutput schema.
-
-For every opportunity, provide:
-- company identity
-- company URL when available
-- opportunity/signal type
-- description of what is happening
-- requirements when explicitly available
-- why it may be relevant
-- why now
-- confidence score
-- confidence level
-- supporting source URLs
+Confidence measures evidence strength, recency, and specificity.
+It is NOT simply a measure of how well the brand matches the creator.
 
 Do not invent:
-- sponsorship programs
-- creator requirements
-- budgets
-- campaign dates
-- partnership relationships
-- contact information
+- campaigns,
+- creator programs,
+- requirements,
+- sponsorship budgets,
+- dates,
+- partnerships,
+- contact details.
 
-When information is unavailable, state that it is unavailable.
+If something cannot be verified, leave it unknown.
 
-## Ranking
+## Result Quality
+
+Prefer fewer high-quality opportunities over many weak ones.
+
+Remove duplicate companies discovered through multiple searches.
+
+Return at most the requested max_opportunities.
 
 Rank opportunities primarily by:
-1. Strength of evidence
-2. Recency
-3. Relevance to the creator
-4. Commercial potential
-5. Urgency
+1. evidence strength,
+2. recency,
+3. creator relevance,
+4. commercial potential,
+5. urgency.
 
-Do not rank an opportunity highly simply because the brand is popular.
+## Output
 
-## Important Guidelines
+Return only the configured OpportunityOutput.
 
-- Prioritize recent information.
-- Prefer primary and authoritative sources where possible.
-- Consider geographic relevance.
-- Look for mutual value between creator and brand.
-- Verify important claims before including them.
-- Preserve source URLs for every opportunity.
-- Prefer fewer high-quality opportunities over many weak ones.
-- The goal is not to discover as many companies as possible.
-  The goal is to discover the most credible current opportunities.
-
-Your final response must conform to the configured OpportunityOutput schema.
-Do not add prose outside the structured output.
+Do not add markdown or prose outside the structured output.
 """
+
+
 root_agent = Agent(
-    model="gemini-3.5-flash",
-    name="opportunity_agent",
+    model='gemini-3.6-flash',
+    name='opportunity_agent',
     description=(
-        "Discovers sponsorship, partnership, and brand deal opportunities "
-        "for content creators by searching the live web using Parallel AI."
+        "Discovers current sponsorship, partnership, affiliate, ambassador, "
+        "campaign, launch, event, and other commercial opportunities for "
+        "content creators using Parallel Search."
     ),
-    mode = "single_turn",
+    mode="single_turn",
     instruction=OPPORTUNITY_AGENT_INSTRUCTION,
     input_schema=OpportunityInput,
     output_schema=OpportunityOutput,
-    
     tools=[get_parallel_mcp_tools()],
 )

@@ -20,11 +20,15 @@ from google.adk.tools.mcp_tool.mcp_toolset import McpToolset, StreamableHTTPConn
 
 def get_parallel_mcp_tools() -> McpToolset:
     """
-    Return an MCPToolset connected to the Parallel Search MCP server.
+    Parallel Search MCP for opportunity discovery.
 
-    If PARALLEL_API_KEY is set, it is sent as a Bearer token for higher
-    rate limits. Otherwise the server is used in free/anonymous mode.
+    Search behavior:
+    - fast mode for lower-latency discovery
+    - small result count to reduce duplicate/low-signal results
+
+    objective and search_queries remain dynamic per web_search call.
     """
+     
     api_key = os.environ.get("PARALLEL_API_KEY")
 
     headers = {}
@@ -32,7 +36,7 @@ def get_parallel_mcp_tools() -> McpToolset:
         headers["Authorization"] = f"Bearer {api_key}"
 
     connection_params = StreamableHTTPConnectionParams(
-        url="https://search.parallel.ai/mcp",
+        url="https://search.parallel.ai/mcp?mode=fast&advanced_settings.max_results=6",
         headers=headers,
     )
 
