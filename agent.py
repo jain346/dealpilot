@@ -1,8 +1,8 @@
 from google.adk.agents.llm_agent import Agent
 
-from .opportunity_agent.agent import root_agent as opportunity_agent
-from .brand_research_agent.agent import root_agent as brand_research_agent
-from .fit_agent.agent import root_agent as fit_agent
+from opportunity_agent.agent import root_agent as opportunity_agent
+from brand_research_agent.agent import root_agent as brand_research_agent
+from fit_agent.agent import root_agent as fit_agent
 
 
 
