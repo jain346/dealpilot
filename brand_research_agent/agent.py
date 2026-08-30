@@ -4,7 +4,6 @@ from .parallel_tools_brand import get_parallel_task_mcp_tools
 
 from pydantic import BaseModel, Field
 
-
 class BrandResearchInput(BaseModel):
     company_name: str = Field(
         description="The company that should be researched."
@@ -204,7 +203,7 @@ Do not return a markdown report outside the configured schema.
 
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model='gemini-3.5-flash',
     name='brand_research_agent',
     description=(
         "Deeply researches a specific company using current web "

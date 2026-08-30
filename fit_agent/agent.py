@@ -5,7 +5,6 @@ from typing import Literal
 from google.adk.agents.llm_agent import Agent
 from pydantic import BaseModel, Field
 
-
 class CreatorProfile(BaseModel):
     niche: str
     platform: str
@@ -174,7 +173,7 @@ Return only the configured FitOutput.
 """
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model='gemini-3.5-flash',
     name="fit_agent",
     description=(
         "Evaluates whether a researched brand is a strong sponsorship "

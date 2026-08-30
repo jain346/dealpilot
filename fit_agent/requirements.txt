@@ -1,2 +1,0 @@
-google-adk>=1.18.0
-python

@@ -5,6 +5,7 @@ from .brand_research_agent.agent import root_agent as brand_research_agent
 from .fit_agent.agent import root_agent as fit_agent
 
 
+
 DIRECTOR_INSTRUCTION = """
 You are the Director Agent of DealPilot.
 
@@ -391,7 +392,7 @@ the creator make a decision.
 
 
 root_agent = Agent(
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash",
     name="dealpilot_director",
     description=(
         "Coordinates DealPilot's opportunity discovery, company research, "

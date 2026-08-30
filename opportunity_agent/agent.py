@@ -239,7 +239,7 @@ Your final response must conform to the configured OpportunityOutput schema.
 Do not add prose outside the structured output.
 """
 root_agent = Agent(
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash",
     name="opportunity_agent",
     description=(
         "Discovers sponsorship, partnership, and brand deal opportunities "
