@@ -1,8 +1,8 @@
 from google.adk.agents.llm_agent import Agent
 
-from .opportunity_agent.agent import root_agent as opportunity_agent
-from .brand_research_agent.agent import root_agent as brand_research_agent
-from .fit_agent.agent import root_agent as fit_agent
+from opportunity_agent.agent import root_agent as opportunity_agent
+from brand_research_agent.agent import root_agent as brand_research_agent
+from fit_agent.agent import root_agent as fit_agent
 
 
 
@@ -392,7 +392,7 @@ the creator make a decision.
 
 
 root_agent = Agent(
-    model="gemini-3.5-flash",
+    model="gemini-3.7-flash",
     name="dealpilot_director",
     description=(
         "Coordinates DealPilot's opportunity discovery, company research, "
