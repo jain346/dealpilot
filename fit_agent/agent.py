@@ -173,7 +173,8 @@ Return only the configured FitOutput.
 """
 
 root_agent = Agent(
-    model='gemini-3.5-flash',
+    model='gemini-3.6-flash',
+    thinking_level='low',
     name="fit_agent",
     description=(
         "Evaluates whether a researched brand is a strong sponsorship "

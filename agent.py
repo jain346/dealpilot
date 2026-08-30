@@ -392,7 +392,8 @@ the creator make a decision.
 
 
 root_agent = Agent(
-    model="gemini-3.5-flash",
+    model="gemini-3.7-flash",
+    thinking_level="high",
     name="dealpilot_director",
     description=(
         "Coordinates DealPilot's opportunity discovery, company research, "
