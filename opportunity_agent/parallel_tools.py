@@ -36,11 +36,7 @@ def get_parallel_mcp_tools() -> McpToolset:
         headers["Authorization"] = f"Bearer {api_key}"
 
     connection_params = StreamableHTTPConnectionParams(
-        url=(
-            "https://search-mcp.parallel.ai/mcp"
-            "?mode=fast"
-            "&advanced_settings.max_results=6"
-        ),
+        url="https://search.parallel.ai/mcp?mode=fast&advanced_settings.max_results=6",
         headers=headers,
     )
 

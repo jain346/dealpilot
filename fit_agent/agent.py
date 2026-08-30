@@ -174,13 +174,12 @@ Return only the configured FitOutput.
 
 root_agent = Agent(
     model='gemini-3.6-flash',
-    thinking_level='low',
-    name="fit_agent",
+    name='fit_agent',
     description=(
         "Evaluates whether a researched brand is a strong sponsorship "
         "match for a specific content creator."
     ),
-    mode="single_turn",
+    mode='single_turn',
     input_schema=FitInput,
     output_schema=FitOutput,
     instruction=FIT_AGENT_INSTRUCTION,

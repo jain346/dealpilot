@@ -228,10 +228,9 @@ Do not add markdown or prose outside the structured output.
 """
 
 
-opportunity_agent = Agent(
-    model="gemini-3.6-flash",
-    thinking_level="medium",
-    name="opportunity_agent",
+root_agent = Agent(
+    model='gemini-3.6-flash',
+    name='opportunity_agent',
     description=(
         "Discovers current sponsorship, partnership, affiliate, ambassador, "
         "campaign, launch, event, and other commercial opportunities for "
@@ -241,10 +240,5 @@ opportunity_agent = Agent(
     instruction=OPPORTUNITY_AGENT_INSTRUCTION,
     input_schema=OpportunityInput,
     output_schema=OpportunityOutput,
-    tools=[
-        get_parallel_mcp_tools(),
-    ],
+    tools=[get_parallel_mcp_tools()],
 )
-
-# Keep root_agent for ADK compatibility.
-root_agent = opportunity_agent

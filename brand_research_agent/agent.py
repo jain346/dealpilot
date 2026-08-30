@@ -222,23 +222,17 @@ Do not return a markdown report outside the schema.
 """
 
 
-brand_research_agent = Agent(
-    model="gemini-3.7-flash",
-    thinking_level="high",
-    name="brand_research_agent",
+root_agent = Agent(
+    model='gemini-3.7-flash',
+    name='brand_research_agent',
     description=(
         "Deeply researches one specific company using current web "
         "intelligence through Parallel Task MCP and returns structured, "
         "evidence-backed brand intelligence."
     ),
-    mode="single_turn",
+    mode='single_turn',
     instruction=BRAND_RESEARCH_INSTRUCTION,
     input_schema=BrandResearchInput,
     output_schema=BrandResearchOutput,
-    tools=[
-        get_parallel_task_mcp_tools(),
-    ],
+    tools=[get_parallel_task_mcp_tools()],
 )
-
-# Keep the ADK package entry point.
-root_agent = brand_research_agent
