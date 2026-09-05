@@ -153,20 +153,15 @@ Construct a focused research request containing:
 The research request should focus on the specific company.
 Do not ask the deep research system to discover unrelated companies.
 
-Prefer current, recent, authoritative, and primary sources.
+Prefer recent, authoritative, and primary sources.
 
-When using createDeepResearch:
+The Task MCP is asynchronous. After starting the research task,
+do not repeatedly perform status polling inside this agent.
 
-1. Create the research task.
-2. Check its status using the available status tool.
-3. Continue until the task is complete.
-4. Retrieve the completed result using the result tool.
-5. Use the completed result as evidence for BrandResearchOutput.
+The application is responsible for handling completion and
+retrieving the completed result.
 
-Do not produce the final BrandResearchOutput immediately after
-creating the research task.
-
-Do not treat a task ID or progress response as research evidence.
+Only produce BrandResearchOutput from completed research results.
 
 ## Evidence
 
