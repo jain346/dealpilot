@@ -1,0 +1,108 @@
+"""Authenticated, user-scoped access to the DealPilot ADK workflow."""
+
+import asyncio
+from collections import defaultdict
+from uuid import uuid4
+
+from google.adk.agents.context_cache_config import ContextCacheConfig
+from google.adk.apps import App
+from google.adk.runners import Runner
+from google.adk.sessions import DatabaseSessionService
+from google.genai import types
+
+from agent import root_agent
+from database import (
+    add_message,
+    create_conversation,
+    adk_database_url,
+    get_conversations,
+    get_messages,
+    get_user,
+    user_owns_conversation,
+)
+
+
+class WorkflowSessionNotFound(Exception):
+    """Raised when a user tries to use a session they do not own."""
+
+
+class DealPilotWorkflow:
+    """One ADK app with isolated conversation sessions for each authenticated user."""
+
+    app_name = "dealpilot"
+
+    def __init__(self) -> None:
+        # ADK stores events and session state in SQLite, so the agent has the
+        # full prior context after an API/server restart.
+        self.session_service = DatabaseSessionService(adk_database_url())
+        self.app = App(
+            name=self.app_name,
+            root_agent=root_agent,
+            # Keep the existing cache threshold used by the CLI runner.
+            context_cache_config=ContextCacheConfig(min_tokens=8192),
+        )
+        self.runner = Runner(app=self.app, session_service=self.session_service)
+        self._session_locks: defaultdict[tuple[str, str], asyncio.Lock] = defaultdict(
+            asyncio.Lock
+        )
+
+    async def create_session(self, user_id: str) -> str:
+        """Create an unguessable session and persist its user ownership."""
+        if get_user(user_id) is None:
+            raise ValueError(
+                f"User '{user_id}' does not exist; create the account before creating a session."
+            )
+
+        session_id = str(uuid4())
+        await self.session_service.create_session(
+            app_name=self.app_name, user_id=user_id, session_id=session_id
+        )
+        create_conversation(session_id, user_id)
+        return session_id
+
+    def user_owns_session(self, user_id: str, session_id: str) -> bool:
+        """Return whether the persisted conversation belongs to this user."""
+        return user_owns_conversation(session_id, user_id)
+
+    def get_conversation(self, session_id: str) -> list[dict[str, str]]:
+        """Return the persisted message transcript in chronological order."""
+        return get_messages(session_id)
+
+    def get_user_conversations(self, user_id: str) -> list[dict[str, str]]:
+        """Return only conversations owned by this user."""
+        return get_conversations(user_id)
+
+    async def run_message(self, user_id: str, session_id: str, message: str) -> str:
+        """Run the director workflow, ensuring the session belongs to the caller."""
+        lock = self._session_locks[(user_id, session_id)]
+        async with lock:
+            # This is the authorization source of truth, and it survives
+            # process restarts unlike the ADK in-memory service.
+            if not user_owns_conversation(session_id, user_id):
+                raise WorkflowSessionNotFound
+            session = await self.session_service.get_session(
+                app_name=self.app_name, user_id=user_id, session_id=session_id
+            )
+            if session is None:
+                # Sessions created before durable ADK storage was enabled have
+                # no ADK event record. Start durable state for them now; all
+                # subsequent turns retain their full agent context.
+                await self.session_service.create_session(
+                    app_name=self.app_name, user_id=user_id, session_id=session_id
+                )
+
+            input_message = types.Content(
+                role="user", parts=[types.Part.from_text(text=message)]
+            )
+            add_message(session_id, "user", message)
+            responses: list[str] = []
+            async for event in self.runner.run_async(
+                user_id=user_id, session_id=session_id, new_message=input_message
+            ):
+                if event.is_final_response() and event.content and event.content.parts:
+                    responses.extend(
+                        part.text for part in event.content.parts if part.text
+                    )
+            response = "".join(responses)
+            add_message(session_id, "assistant", response)
+            return response

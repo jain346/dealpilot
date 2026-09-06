@@ -1,14 +1,15 @@
 import asyncio
 import warnings
-from google.adk.runners import Runner
-from google.adk.apps import App
-from google.adk.agents.context_cache_config import ContextCacheConfig
-from google.adk.sessions import InMemorySessionService
-from google.genai import types
+from pathlib import Path
+from uuid import uuid4
 
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
 
-# Import the root agent exported by the project
-from agent import root_agent
+from agent_api import create_agent_router
+from auth import router as auth_router
+from auth import services as auth_services
+from workflow import DealPilotWorkflow
 
 
 # ADK orchestrates function calls itself, but google-genai emits this advisory
@@ -20,28 +21,33 @@ warnings.filterwarnings(
 )
 
 
+workflow = DealPilotWorkflow()
+
+# `uvicorn run_agent:app` serves this API. Auth routes are public only for
+# signup/login; every agent workflow route requires a Bearer JWT.
+app = FastAPI(title="DealPilot API")
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(create_agent_router(workflow))
+
+
+@app.get("/", include_in_schema=False)
+async def web_ui():
+    return FileResponse(Path(__file__).with_name("static") / "index.html")
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 async def main():
-    session_service = InMemorySessionService()
-
-    APP_NAME = "terminal-multi-agent-app"
-    USER_ID = "local_developer"
-    SESSION_ID = "session_001"
-
-    await session_service.create_session(
-        app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
-    )
-
-    app = App(
-        name=APP_NAME,
-        root_agent=root_agent,
-        # Gemini 3 requires at least 4,096 cached tokens. Use a larger local
-        # gate because the cacheable prefix is smaller than the full prompt.
-        context_cache_config=ContextCacheConfig(min_tokens=8192),
-    )
-    runner = Runner(
-        app=app,
-        session_service=session_service,
-    )
+    """Keep a local CLI entry point with its own isolated development session."""
+    user_id = "local_developer"
+    if not auth_services.get_user(user_id):
+        # The CLI is a local-development convenience, but it follows the same
+        # durable ownership constraint as browser users.
+        auth_services.create_user(user_id, str(uuid4()), None)
+    session_id = await workflow.create_session(user_id)
 
     print("🤖 DealPilot chat is ready. Type 'exit' or 'quit' to end.\n")
 
@@ -53,20 +59,9 @@ async def main():
         if not user_query:
             continue
 
-        input_message = types.Content(
-            role="user", parts=[types.Part.from_text(text=user_query)]
-        )
-        event_stream = runner.run_async(
-            user_id=USER_ID, session_id=SESSION_ID, new_message=input_message
-        )
-
-        async for event in event_stream:
-            if event.is_final_response() and event.content and event.content.parts:
-                response_text = "".join(
-                    part.text or "" for part in event.content.parts if part.text
-                )
-                if response_text:
-                    print(f"\nDealPilot: {response_text}\n")
+        response_text = await workflow.run_message(user_id, session_id, user_query)
+        if response_text:
+            print(f"\nDealPilot: {response_text}\n")
 
 
 if __name__ == "__main__":

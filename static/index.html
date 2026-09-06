@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DealPilot — authenticated creator partnership intelligence.">
+  <title>DealPilot</title>
+  <style>
+    :root { --ink:#102039; --muted:#64748b; --line:#dce5ee; --paper:#fff; --canvas:#f5f8fb; --navy:#102a43; --blue:#1664d9; --blue-dark:#0d4eae; --mint:#d8f5eb; --danger:#b42318; }
+    * { box-sizing:border-box; } body { margin:0; min-height:100vh; color:var(--ink); background:var(--canvas); font:15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button,input { font:inherit; } button { cursor:pointer; } .hidden { display:none !important; }
+    #authView { min-height:100vh; display:grid; grid-template-columns:minmax(280px, .95fr) minmax(360px, 1.05fr); }
+    .hero { padding:clamp(36px,7vw,100px); color:white; background:radial-gradient(circle at 78% 20%,#2b78ee 0,transparent 29%),linear-gradient(145deg,#0d253d,#123d64); display:flex; flex-direction:column; justify-content:space-between; }
+    .logo { font-size:21px; font-weight:800; letter-spacing:-.7px; }.logo i { color:#71d6ff; font-style:normal; }.hero h1 { max-width:490px; margin:80px 0 18px; font-size:clamp(38px,5vw,63px); line-height:1.04; letter-spacing:-2.5px; }.hero p { max-width:430px; color:#c7d7e9; font-size:17px; }.eyebrow { margin:0; color:#8cdfff; font-weight:700; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; }
+    .auth-panel { width:min(100%,500px); margin:auto; padding:42px 32px; }.auth-panel h2 { margin:15px 0 6px; font-size:30px; letter-spacing:-1px; }.subtle { color:var(--muted); margin:0 0 28px; }.tabs { display:flex; gap:7px; margin-bottom:24px; padding:4px; background:#e8eef5; border-radius:10px; }.tab { flex:1; padding:9px; border:0; border-radius:7px; color:var(--muted); background:transparent; font-weight:700; }.tab.active { color:var(--ink); background:white; box-shadow:0 1px 3px #9fb1c433; }
+    form { display:grid; gap:15px; } label { display:grid; gap:6px; color:#334155; font-size:13px; font-weight:700; } input { width:100%; padding:12px 13px; border:1px solid #cbd5e1; border-radius:8px; background:white; outline:none; } input:focus { border-color:var(--blue); box-shadow:0 0 0 3px #1664d920; }.primary { padding:12px 16px; border:0; border-radius:8px; color:white; background:var(--blue); font-weight:750; }.primary:hover { background:var(--blue-dark); }.primary:disabled { cursor:not-allowed; opacity:.6; }.form-message { min-height:21px; margin:3px 0 0; color:var(--danger); font-size:13px; }
+    #appView { min-height:100vh; display:grid; grid-template-columns:260px 1fr; }.sidebar { padding:27px 20px; color:#dce9f6; background:var(--navy); display:flex; flex-direction:column; }.sidebar .logo { color:white; }.product-note { margin:46px 0 18px; color:#a9bfd4; font-size:13px; }.new-chat { display:flex; align-items:center; gap:8px; width:100%; padding:11px; border:1px solid #41617f; border-radius:8px; color:white; background:#1c405f; font-weight:700; }.new-chat:hover { background:#285575; }.history { max-height:300px; margin-top:16px; overflow:auto; }.history-label { margin:0 0 5px; color:#7ea0bf; font-size:11px; font-weight:750; letter-spacing:.8px; text-transform:uppercase; }.history-item { overflow:hidden; width:100%; padding:8px; border:0; border-radius:6px; color:#b9d3ea; background:transparent; font-size:12px; text-align:left; text-overflow:ellipsis; white-space:nowrap; }.history-item:hover,.history-item.active { color:white; background:#1c405f; }.account { margin-top:auto; padding-top:18px; border-top:1px solid #365674; }.account-name { color:white; font-weight:750; }.account-email { overflow:hidden; margin:2px 0 12px; color:#a9bfd4; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }.logout { padding:0; border:0; color:#b9d3ea; background:none; text-decoration:underline; }
+    .chat { display:flex; min-width:0; flex-direction:column; }.chat-header { display:flex; align-items:center; justify-content:space-between; padding:20px clamp(20px,5vw,52px); border-bottom:1px solid var(--line); background:#ffffffc9; }.chat-header h1 { margin:0; font-size:18px; }.header-actions { display:flex; align-items:center; gap:13px; }.mobile-logout { display:none; padding:0; border:0; color:#365674; background:none; text-decoration:underline; font-size:12px; }.status { display:flex; align-items:center; gap:7px; color:#557087; font-size:12px; }.dot { width:8px; height:8px; border-radius:50%; background:#22a06b; }.messages { width:min(100%,900px); flex:1; margin:0 auto; padding:32px clamp(20px,5vw,52px); }.welcome { max-width:650px; margin:7vh auto; }.welcome h2 { max-width:520px; margin:0 0 12px; font-size:clamp(30px,4vw,46px); line-height:1.08; letter-spacing:-1.8px; }.welcome p { max-width:500px; color:var(--muted); font-size:17px; }.suggestions { display:flex; flex-wrap:wrap; gap:9px; margin-top:28px; }.suggestion { padding:9px 12px; border:1px solid #cbd9e8; border-radius:99px; color:#244c72; background:white; font-size:13px; }.suggestion:hover { border-color:var(--blue); color:var(--blue); }.message { max-width:760px; margin:0 auto 21px; }.message-label { margin-bottom:5px; color:var(--muted); font-size:12px; font-weight:750; }.bubble { padding:13px 15px; border-radius:4px 14px 14px 14px; background:white; box-shadow:0 1px 2px #10203910; white-space:pre-wrap; }.message.user .message-label { text-align:right; }.message.user .bubble { margin-left:auto; border-radius:14px 4px 14px 14px; color:white; background:var(--blue); }.composer-wrap { padding:18px clamp(20px,5vw,52px) 27px; background:linear-gradient(transparent,var(--canvas) 25%); }.composer { display:flex; gap:10px; width:min(900px,100%); margin:auto; padding:8px; border:1px solid #cbd9e8; border-radius:12px; background:white; box-shadow:0 6px 24px #0d253d0d; }.composer input { border:0; box-shadow:none !important; }.send { min-width:72px; padding:0 16px; border:0; border-radius:8px; color:white; background:var(--blue); font-weight:750; }.send:disabled { cursor:not-allowed; opacity:.55; }
+    @media (max-width:720px) { #authView { grid-template-columns:1fr; }.hero { min-height:265px; padding:30px; }.hero h1 { margin:42px 0 12px; font-size:39px; }.hero p { font-size:15px; }.auth-panel { padding:36px 24px; } #appView { grid-template-columns:1fr; }.sidebar { display:none; }.chat-header { padding:16px 20px; }.mobile-logout { display:block; }.messages { padding-top:20px; }.composer-wrap { padding:14px 20px 20px; } }
+  </style>
+</head>
+<body>
+  <section id="authView">
+    <aside class="hero"><div class="logo">Deal<i>Pilot</i></div><div><p class="eyebrow">Creator partnership intelligence</p><h1>Find the next right deal.</h1><p>Research brands, surface timely opportunities, and make confident partnership decisions with an agent built for creators.</p></div><small>Private, account-based agent workspace</small></aside>
+    <main class="auth-panel"><div class="tabs"><button class="tab active" data-mode="login">Log in</button><button class="tab" data-mode="signup">Create account</button></div><h2 id="authTitle">Welcome back</h2><p class="subtle" id="authCopy">Log in to your DealPilot workspace.</p><form id="authForm"><label>Username<input id="username" autocomplete="username" required></label><label id="emailField" class="hidden">Email <input id="email" type="email" autocomplete="email"></label><label>Password<input id="password" type="password" autocomplete="current-password" minlength="8" required></label><button class="primary" id="authSubmit" type="submit">Log in</button><p id="authMessage" class="form-message" role="alert"></p></form></main>
+  </section>
+  <section id="appView" class="hidden">
+    <aside class="sidebar"><div class="logo">Deal<i>Pilot</i></div><p class="product-note">Your private partnership intelligence workspace.</p><button class="new-chat" id="newChat">＋ New conversation</button><div class="history"><p class="history-label">Saved conversations</p><div id="historyList"></div></div><div class="account"><div class="account-name" id="accountName"></div><div class="account-email" id="accountEmail"></div><button class="logout" id="logout">Log out</button></div></aside>
+    <main class="chat"><header class="chat-header"><h1>DealPilot Agent</h1><div class="header-actions"><span class="status"><span class="dot"></span>Ready to research</span><button class="mobile-logout" id="mobileLogout">Log out</button></div></header><div class="messages" id="messages"><div class="welcome" id="welcome"><p class="eyebrow">Your deal desk</p><h2>What partnership opportunity can I help with?</h2><p>Ask about sponsors, creator campaigns, affiliate programs, or a brand you want to understand.</p><div class="suggestions"><button class="suggestion">Find sponsorship opportunities in fitness</button><button class="suggestion">Research a brand for me</button><button class="suggestion">Evaluate a partnership fit</button></div></div></div><div class="composer-wrap"><form class="composer" id="chatForm"><input id="chatInput" placeholder="Ask DealPilot anything…" autocomplete="off" maxlength="20000" required><button class="send" id="sendButton" type="submit">Send</button></form></div></main>
+  </section>
+  <script>
+    const store = { token: 'dealpilot.token', session: 'dealpilot.session', user: 'dealpilot.user' };
+    let mode = 'login';
+    const $ = id => document.getElementById(id);
+    const json = async response => { const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.detail || 'Something went wrong. Please try again.'); return body; };
+    const authHeaders = () => ({ 'Authorization': `Bearer ${localStorage.getItem(store.token)}`, 'Content-Type': 'application/json' });
+    const escapeHtml = value => String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    function normalizeResponsePayload(payload) {
+      if (typeof payload === 'string') {
+        const text = payload || '';
+        return { text, markdown: text, links: Array.from(new Set((text.match(/https?:\/\/[^\s<>'")\]]+/g) || []))) };
+      }
+      if (payload && typeof payload === 'object') {
+        const text = typeof payload.text === 'string' ? payload.text : (typeof payload.markdown === 'string' ? payload.markdown : String(payload));
+        const markdown = typeof payload.markdown === 'string' ? payload.markdown : text;
+        const links = Array.isArray(payload.links) ? payload.links : Array.from(new Set((text.match(/https?:\/\/[^\s<>'")\]]+/g) || [])));
+        return { text, markdown, links };
+      }
+      return { text: '', markdown: '', links: [] };
+    }
+    function renderMarkdownToHtml(markdown = '') {
+      const source = String(markdown || '').replace(/\r\n/g, '\n').trim();
+      if (!source) return '<p></p>';
+      const paragraphs = source.split(/\n{2,}/).map(block => block.trim()).filter(Boolean);
+      return paragraphs.map(block => {
+        const lines = block.split('\n');
+        if (lines.every(line => /^[-*]\s+/.test(line))) {
+          const items = lines.map(line => `<li>${inlineMarkdown(line.replace(/^[-*]\s+/, ''))}</li>`).join('');
+          return `<ul>${items}</ul>`;
+        }
+        if (lines.every(line => /^\d+\.\s+/.test(line))) {
+          const items = lines.map(line => `<li>${inlineMarkdown(line.replace(/^\d+\.\s+/, ''))}</li>`).join('');
+          return `<ol>${items}</ol>`;
+        }
+        return `<p>${inlineMarkdown(block)}</p>`;
+      }).join('');
+    }
+    function inlineMarkdown(text = '') {
+      let html = escapeHtml(text)
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/_([^_]+)_/g, '<em>$1</em>')
+        .replace(/(https?:\/\/[^\s<>'")\]]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+      return html.replace(/\n/g, '<br>');
+    }
+    function setMode(nextMode) { mode = nextMode; document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.mode === mode)); $('emailField').classList.toggle('hidden', mode !== 'signup'); $('email').required = mode === 'signup'; $('password').autocomplete = mode === 'signup' ? 'new-password' : 'current-password'; $('authTitle').textContent = mode === 'signup' ? 'Create your workspace' : 'Welcome back'; $('authCopy').textContent = mode === 'signup' ? 'Start researching your next brand partnership.' : 'Log in to your DealPilot workspace.'; $('authSubmit').textContent = mode === 'signup' ? 'Create account' : 'Log in'; $('authMessage').textContent = ''; }
+    function showApp(user) { $('authView').classList.add('hidden'); $('appView').classList.remove('hidden'); $('accountName').textContent = user.username; $('accountEmail').textContent = user.email || 'DealPilot member'; loadSavedConversation(); loadConversations(); }
+    function showAuth() { $('appView').classList.add('hidden'); $('authView').classList.remove('hidden'); }
+    async function restoreLogin() { const token = localStorage.getItem(store.token); if (!token) return; try { const user = await json(await fetch('/auth/me', { headers: { Authorization: `Bearer ${token}` } })); localStorage.setItem(store.user, JSON.stringify(user)); showApp(user); } catch { localStorage.clear(); } }
+    async function ensureSession() { let session = localStorage.getItem(store.session); if (session) return session; const body = await json(await fetch('/agent/sessions', { method: 'POST', headers: authHeaders() })); localStorage.setItem(store.session, body.session_id); loadConversations(); return body.session_id; }
+    async function loadConversations() { try { const conversations = await json(await fetch('/agent/sessions', { headers: authHeaders() })); const list = $('historyList'); list.innerHTML = ''; conversations.forEach(conversation => { const button = document.createElement('button'); button.className = 'history-item'; button.textContent = `Conversation · ${new Date(conversation.created_at).toLocaleString()}`; button.classList.toggle('active', conversation.session_id === localStorage.getItem(store.session)); button.addEventListener('click', () => { localStorage.setItem(store.session, conversation.session_id); $('messages').innerHTML = ''; loadSavedConversation(); loadConversations(); }); list.append(button); }); } catch { /* The next authenticated request will surface any error. */ } }
+    async function loadSavedConversation() { const session = localStorage.getItem(store.session); if (!session) return; try { const history = await json(await fetch(`/agent/sessions/${encodeURIComponent(session)}/messages`, { headers: authHeaders() })); if (!history.length) return; $('messages').innerHTML = ''; history.forEach(message => addMessage(message.role, message.content)); } catch { localStorage.removeItem(store.session); } }
+    function addMessage(role, text) { const welcome = $('welcome'); if (welcome) welcome.classList.add('hidden'); const item = document.createElement('article'); item.className = `message ${role}`; const label = document.createElement('div'); label.className = 'message-label'; label.textContent = role === 'user' ? 'You' : 'DealPilot'; const bubble = document.createElement('div'); bubble.className = 'bubble'; if (role === 'assistant') { const payload = normalizeResponsePayload(text); bubble.innerHTML = renderMarkdownToHtml(payload.markdown); } else { bubble.textContent = String(text || ''); } item.append(label, bubble); $('messages').append(item); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); return bubble; }
+    async function sendMessage(message) { const input = $('chatInput'), send = $('sendButton'); addMessage('user', message); input.value = ''; input.disabled = true; send.disabled = true; const pending = addMessage('assistant', 'Researching…'); try { const session = await ensureSession(); const body = await json(await fetch(`/agent/sessions/${encodeURIComponent(session)}/messages`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ message }) })); const response = normalizeResponsePayload(body.response); pending.innerHTML = renderMarkdownToHtml(response.markdown || response.text || 'I completed the workflow, but it did not return a written response.'); } catch (error) { pending.textContent = `Unable to reach DealPilot: ${error.message}`; if (/authentication|credentials|token/i.test(error.message)) { localStorage.clear(); setTimeout(showAuth, 800); } } finally { input.disabled = false; send.disabled = false; input.focus(); } }
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
+    $('authForm').addEventListener('submit', async event => { event.preventDefault(); const submit = $('authSubmit'); submit.disabled = true; $('authMessage').textContent = ''; try { if (mode === 'signup') { await json(await fetch('/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: $('username').value.trim(), password: $('password').value, email: $('email').value.trim() || null }) })); } const form = new URLSearchParams({ username: $('username').value.trim(), password: $('password').value }); const login = await json(await fetch('/auth/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form })); localStorage.setItem(store.token, login.access_token); const user = await json(await fetch('/auth/me', { headers: { Authorization: `Bearer ${login.access_token}` } })); localStorage.setItem(store.user, JSON.stringify(user)); showApp(user); } catch (error) { $('authMessage').textContent = error.message; } finally { submit.disabled = false; } });
+    $('chatForm').addEventListener('submit', event => { event.preventDefault(); const message = $('chatInput').value.trim(); if (message) sendMessage(message); });
+    document.querySelectorAll('.suggestion').forEach(button => button.addEventListener('click', () => sendMessage(button.textContent)));
+    $('newChat').addEventListener('click', () => { localStorage.removeItem(store.session); $('messages').innerHTML = '<div class="welcome" id="welcome"><p class="eyebrow">New conversation</p><h2>What would you like to explore?</h2><p>Your next message will start a fresh, private workflow session.</p></div>'; $('chatInput').focus(); });
+    function logout() { localStorage.clear(); $('authForm').reset(); setMode('login'); showAuth(); }
+    $('logout').addEventListener('click', logout); $('mobileLogout').addEventListener('click', logout);
+    restoreLogin();
+  </script>
+</body>
+</html>

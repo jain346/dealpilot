@@ -1,3 +1,11 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# ADK reads provider settings from process environment variables.  Load the
+# project-local file before any agents instantiate their Gemini clients.
+load_dotenv(Path(__file__).with_name(".env"))
+
 from google.adk.agents.llm_agent import Agent
 
 from opportunity_agent.agent import root_agent as opportunity_agent
@@ -392,8 +400,8 @@ the creator make a decision.
 
 
 root_agent = Agent(
-    model='gemini-3.7-flash',
-    name='dealpilot_director',
+    model="gemini-3.7-flash",
+    name="dealpilot_director",
     description=(
         "Coordinates DealPilot's opportunity discovery, company research, "
         "and creator-brand fit evaluation."
