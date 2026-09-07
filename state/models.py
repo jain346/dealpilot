@@ -28,3 +28,17 @@ class CreatorProfile(BaseModel):
             missing.append("region")
 
         return missing
+
+class CreatorProfileUpdate(BaseModel):
+    creator_name: str | None = None
+
+    niche: str | None = None
+    platforms: list[str] | None = None
+
+    region: str | None = None
+    languages: list[str] | None = None
+
+    audience_description: str | None = None
+    audience_size: int | None = None
+    average_views: int | None = None
+    engagement_rate: float | None = None
