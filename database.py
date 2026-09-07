@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
+import json
 
 
 DATABASE_PATH = Path(
@@ -65,6 +66,36 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS messages_session_created_idx
                 ON messages(session_id, id);
+            
+            CREATE TABLE IF NOT EXISTS creator_profiles (
+                user_id TEXT PRIMARY KEY
+                    REFERENCES users(username) ON DELETE CASCADE,
+
+                creator_name TEXT,
+
+                niche TEXT,
+
+                platforms TEXT,
+
+                region TEXT,
+
+                languages TEXT,
+
+                audience_description TEXT,
+
+                audience_size INTEGER,
+
+                average_views INTEGER,
+
+                engagement_rate REAL,
+
+                created_at TEXT NOT NULL,
+
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS creator_profiles_updated_idx
+                ON creator_profiles(updated_at);
             """
         )
 
@@ -143,5 +174,162 @@ def get_conversations(username: str) -> list[dict[str, str]]:
         ).fetchall()
     return [dict(row) for row in rows]
 
+def get_creator_profile(username: str) -> Optional[dict]:
+    with connection() as db:
+        row = db.execute(
+            """
+            SELECT
+                user_id,
+                creator_name,
+                niche,
+                platforms,
+                region,
+                languages,
+                audience_description,
+                audience_size,
+                average_views,
+                engagement_rate,
+                created_at,
+                updated_at
+            FROM creator_profiles
+            WHERE user_id = ?
+            """,
+            (username,),
+        ).fetchone()
+
+    if not row:
+        return None
+
+    profile = dict(row)
+
+    profile["platforms"] = (
+        json.loads(profile["platforms"])
+        if profile["platforms"]
+        else []
+    )
+
+    profile["languages"] = (
+        json.loads(profile["languages"])
+        if profile["languages"]
+        else []
+    )
+
+    return profile
+
+
+def create_empty_creator_profile(username: str) -> dict:
+    timestamp = now()
+
+    with connection() as db:
+        db.execute(
+            """
+            INSERT OR IGNORE INTO creator_profiles (
+                user_id,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?)
+            """,
+            (username, timestamp, timestamp),
+        )
+
+    profile = get_creator_profile(username)
+
+    if profile is None:
+        raise RuntimeError(
+            f"Failed to create creator profile for user '{username}'"
+        )
+
+    return profile
+
+def upsert_creator_profile(
+    username: str,
+    profile: dict,
+) -> dict:
+    timestamp = now()
+
+    platforms = json.dumps(
+        profile.get("platforms", []),
+        ensure_ascii=False,
+    )
+
+    languages = json.dumps(
+        profile.get("languages", []),
+        ensure_ascii=False,
+    )
+
+    with connection() as db:
+        existing = db.execute(
+            "SELECT user_id FROM creator_profiles WHERE user_id = ?",
+            (username,),
+        ).fetchone()
+
+        if existing:
+            db.execute(
+                """
+                UPDATE creator_profiles
+                SET
+                    creator_name = ?,
+                    niche = ?,
+                    platforms = ?,
+                    region = ?,
+                    languages = ?,
+                    audience_description = ?,
+                    audience_size = ?,
+                    average_views = ?,
+                    engagement_rate = ?,
+                    updated_at = ?
+                WHERE user_id = ?
+                """,
+                (
+                    profile.get("creator_name"),
+                    profile.get("niche"),
+                    platforms,
+                    profile.get("region"),
+                    languages,
+                    profile.get("audience_description"),
+                    profile.get("audience_size"),
+                    profile.get("average_views"),
+                    profile.get("engagement_rate"),
+                    timestamp,
+                    username,
+                ),
+            )
+        else:
+            db.execute(
+                """
+                INSERT INTO creator_profiles (
+                    user_id,
+                    creator_name,
+                    niche,
+                    platforms,
+                    region,
+                    languages,
+                    audience_description,
+                    audience_size,
+                    average_views,
+                    engagement_rate,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    username,
+                    profile.get("creator_name"),
+                    profile.get("niche"),
+                    platforms,
+                    profile.get("region"),
+                    languages,
+                    profile.get("audience_description"),
+                    profile.get("audience_size"),
+                    profile.get("average_views"),
+                    profile.get("engagement_rate"),
+                    timestamp,
+                    timestamp,
+                ),
+            )
+
+    return get_creator_profile(username)
 
 init_db()
