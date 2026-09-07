@@ -6,7 +6,6 @@ from state.profile import (
 
 __all__ = [
     "CreatorProfile",
-    "CreatorProfileUpdate",
     "load_or_create_creator_profile",
     "update_creator_profile",
 ]

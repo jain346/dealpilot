@@ -1,10 +1,17 @@
 import asyncio
+import time
 import warnings
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from logging_config import configure_logging, logger
+
+configure_logging()
 
 from agent_api import create_agent_router
 from auth import router as auth_router
@@ -29,9 +36,52 @@ app = FastAPI(title="DealPilot API")
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(create_agent_router(workflow))
 
+frontend_dist = Path(__file__).parent / "frontend" / "dealpilot-ui" / "dist"
+if (frontend_dist / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="frontend-assets")
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = str(uuid4())
+        started_at = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception(
+                "http_request_failed",
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+                },
+            )
+            raise
+
+        response.headers["X-Request-ID"] = request_id
+        logger.info(
+            "http_request_completed",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+            },
+        )
+        return response
+
+
+app.add_middleware(RequestLoggingMiddleware)
+
 
 @app.get("/", include_in_schema=False)
 async def web_ui():
+    frontend_dist = Path(__file__).parent / "frontend" / "dealpilot-ui" / "dist"
+    built_index = frontend_dist / "index.html"
+    if built_index.exists():
+        return FileResponse(built_index)
     return FileResponse(Path(__file__).with_name("static") / "index.html")
 
 

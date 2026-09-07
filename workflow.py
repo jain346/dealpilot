@@ -1,6 +1,7 @@
 """Authenticated, user-scoped access to the DealPilot ADK workflow."""
 
 import asyncio
+import time
 from collections import defaultdict
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ from google.adk.sessions import DatabaseSessionService
 from google.genai import types
 
 from agent import root_agent
+from logging_config import logger
 from database import (
     add_message,
     create_conversation,
@@ -58,6 +60,10 @@ class DealPilotWorkflow:
             app_name=self.app_name, user_id=user_id, session_id=session_id
         )
         create_conversation(session_id, user_id)
+        logger.info(
+            "workflow_session_created",
+            extra={"user_id": user_id, "session_id": session_id},
+        )
         return session_id
 
     def user_owns_session(self, user_id: str, session_id: str) -> bool:
@@ -76,10 +82,23 @@ class DealPilotWorkflow:
         """Run the director workflow, ensuring the session belongs to the caller."""
         lock = self._session_locks[(user_id, session_id)]
         async with lock:
+            started_at = time.perf_counter()
             # This is the authorization source of truth, and it survives
             # process restarts unlike the ADK in-memory service.
             if not user_owns_conversation(session_id, user_id):
+                logger.warning(
+                    "workflow_session_not_found",
+                    extra={"user_id": user_id, "session_id": session_id},
+                )
                 raise WorkflowSessionNotFound
+            logger.info(
+                "agent_run_started",
+                extra={
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "input_chars": len(message),
+                },
+            )
             session = await self.session_service.get_session(
                 app_name=self.app_name, user_id=user_id, session_id=session_id
             )
@@ -105,4 +124,13 @@ class DealPilotWorkflow:
                     )
             response = "".join(responses)
             add_message(session_id, "assistant", response)
+            logger.info(
+                "agent_run_completed",
+                extra={
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "response_chars": len(response),
+                    "duration_ms": round((time.perf_counter() - started_at) * 1000, 2),
+                },
+            )
             return response

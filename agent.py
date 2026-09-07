@@ -12,7 +12,6 @@ from opportunity_agent.agent import root_agent as opportunity_agent
 from brand_research_agent.agent import root_agent as brand_research_agent
 from fit_agent.agent import root_agent as fit_agent
 
-from google.adk import Agent
 from google.adk.tools import ToolContext
 
 from state.models import CreatorProfileUpdate
@@ -140,7 +139,7 @@ It returns a structured fit score, recommendation, strengths, concerns, and reas
 
 The creator profile is available in persistent user-scoped state under:
 
-`user:creator_profile`
+`{user:creator_profile?}`
 
 The profile has this structure:
 

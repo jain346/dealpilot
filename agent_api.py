@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 
 from auth.middleware import get_current_user
 from auth.models import UserInDB
+from state.models import CreatorProfile, CreatorProfileUpdate
+from state.profile import load_or_create_creator_profile, update_creator_profile
 from workflow import DealPilotWorkflow, WorkflowSessionNotFound
 
 
@@ -22,6 +24,10 @@ class AgentMessage(BaseModel):
 class AgentResponse(BaseModel):
     session_id: str
     response: dict[str, Any]
+
+
+class ProfileResponse(CreatorProfile):
+    """Persistent creator profile returned to the authenticated workspace."""
 
 
 class ConversationMessage(BaseModel):
@@ -59,6 +65,17 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
     @router.get("/sessions", response_model=list[ConversationSummary])
     async def list_sessions(current_user: UserInDB = Depends(get_current_user)):
         return workflow.get_user_conversations(current_user.username)
+
+    @router.get("/profile", response_model=ProfileResponse)
+    async def get_profile(current_user: UserInDB = Depends(get_current_user)):
+        return load_or_create_creator_profile(current_user.username)
+
+    @router.patch("/profile", response_model=ProfileResponse)
+    async def patch_profile(
+        payload: CreatorProfileUpdate,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        return update_creator_profile(current_user.username, payload)
 
     @router.post("/sessions/{session_id}/messages", response_model=AgentResponse)
     async def send_message(
