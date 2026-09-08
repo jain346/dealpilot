@@ -96,6 +96,135 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS creator_profiles_updated_idx
                 ON creator_profiles(updated_at);
+
+            CREATE TABLE IF NOT EXISTS opportunities (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                user_id TEXT NOT NULL
+                    REFERENCES users(username) ON DELETE CASCADE,
+
+                session_id TEXT NOT NULL
+                    REFERENCES conversations(session_id) ON DELETE CASCADE,
+
+                company_name TEXT NOT NULL,
+                company_url TEXT,
+
+                signal_type TEXT NOT NULL,
+                opportunity_description TEXT NOT NULL,
+
+                requirements TEXT NOT NULL DEFAULT '[]',
+
+                is_explicit_opportunity INTEGER NOT NULL DEFAULT 0,
+
+                why_relevant TEXT NOT NULL,
+                why_now TEXT,
+
+                confidence REAL NOT NULL,
+                confidence_level TEXT NOT NULL,
+
+                source_urls TEXT NOT NULL DEFAULT '[]',
+
+                status TEXT NOT NULL DEFAULT 'DISCOVERED',
+
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS opportunities_user_updated_idx
+                ON opportunities(user_id, updated_at DESC);
+
+            CREATE INDEX IF NOT EXISTS opportunities_session_idx
+                ON opportunities(session_id);
+
+
+            CREATE TABLE IF NOT EXISTS brand_research (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                user_id TEXT NOT NULL
+                    REFERENCES users(username) ON DELETE CASCADE,
+
+                session_id TEXT NOT NULL
+                    REFERENCES conversations(session_id) ON DELETE CASCADE,
+
+                opportunity_id INTEGER
+                    REFERENCES opportunities(id) ON DELETE SET NULL,
+
+                company_name TEXT NOT NULL,
+                company_url TEXT,
+
+                status TEXT NOT NULL DEFAULT 'COMPLETED',
+
+                parallel_task_id TEXT,
+
+                summary TEXT,
+
+                products TEXT NOT NULL DEFAULT '[]',
+                target_markets TEXT NOT NULL DEFAULT '[]',
+                target_customers TEXT NOT NULL DEFAULT '[]',
+                recent_activity TEXT NOT NULL DEFAULT '[]',
+                creator_partnership_signals TEXT NOT NULL DEFAULT '[]',
+                partnership_requirements TEXT NOT NULL DEFAULT '[]',
+                why_now TEXT NOT NULL DEFAULT '[]',
+
+                evidence TEXT NOT NULL DEFAULT '[]',
+                risks_or_unknowns TEXT NOT NULL DEFAULT '[]',
+
+                confidence REAL,
+
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS brand_research_user_updated_idx
+                ON brand_research(user_id, updated_at DESC);
+
+            CREATE INDEX IF NOT EXISTS brand_research_session_idx
+                ON brand_research(session_id);
+
+            CREATE INDEX IF NOT EXISTS brand_research_task_idx
+                ON brand_research(parallel_task_id);
+
+
+            CREATE TABLE IF NOT EXISTS fit_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                user_id TEXT NOT NULL
+                    REFERENCES users(username) ON DELETE CASCADE,
+
+                session_id TEXT NOT NULL
+                    REFERENCES conversations(session_id) ON DELETE CASCADE,
+
+                opportunity_id INTEGER
+                    REFERENCES opportunities(id) ON DELETE SET NULL,
+
+                research_id INTEGER
+                    REFERENCES brand_research(id) ON DELETE SET NULL,
+
+                company_name TEXT NOT NULL,
+
+                overall_score REAL NOT NULL,
+                audience_fit REAL NOT NULL,
+                content_fit REAL NOT NULL,
+                market_fit REAL NOT NULL,
+                partnership_fit REAL NOT NULL,
+                timing_fit REAL NOT NULL,
+
+                recommendation TEXT NOT NULL,
+
+                strengths TEXT NOT NULL DEFAULT '[]',
+                concerns TEXT NOT NULL DEFAULT '[]',
+
+                reasoning TEXT NOT NULL,
+
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS fit_results_user_updated_idx
+                ON fit_results(user_id, updated_at DESC);
+
+            CREATE INDEX IF NOT EXISTS fit_results_session_idx
+                ON fit_results(session_id);
             """
         )
 
@@ -331,5 +460,259 @@ def upsert_creator_profile(
             )
 
     return get_creator_profile(username)
+
+def list_opportunities(
+    username: str,
+    status: str | None = None,
+) -> list[dict]:
+
+    query = """
+        SELECT *
+        FROM opportunities
+        WHERE user_id = ?
+    """
+
+    params: list = [username]
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    query += " ORDER BY updated_at DESC"
+
+    with connection() as db:
+        rows = db.execute(query, params).fetchall()
+
+    results = []
+
+    for row in rows:
+        item = dict(row)
+
+        item["requirements"] = json.loads(
+            item["requirements"] or "[]"
+        )
+        item["source_urls"] = json.loads(
+            item["source_urls"] or "[]"
+        )
+        item["is_explicit_opportunity"] = bool(
+            item["is_explicit_opportunity"]
+        )
+
+        results.append(item)
+
+    return results
+
+
+def get_opportunity(
+    username: str,
+    opportunity_id: int,
+) -> dict | None:
+    with connection() as db:
+        row = db.execute(
+            """
+            SELECT *
+            FROM opportunities
+            WHERE id = ? AND user_id = ?
+            """,
+            (opportunity_id, username),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    item = dict(row)
+
+    item["requirements"] = json.loads(
+        item["requirements"] or "[]"
+    )
+    item["source_urls"] = json.loads(
+        item["source_urls"] or "[]"
+    )
+    item["is_explicit_opportunity"] = bool(
+        item["is_explicit_opportunity"]
+    )
+
+    return item
+
+
+def list_brand_research(
+    username: str,
+) -> list[dict]:
+    with connection() as db:
+        rows = db.execute(
+            """
+            SELECT *
+            FROM brand_research
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (username,),
+        ).fetchall()
+
+    results = []
+
+    json_fields = [
+        "products",
+        "target_markets",
+        "target_customers",
+        "recent_activity",
+        "creator_partnership_signals",
+        "partnership_requirements",
+        "why_now",
+        "evidence",
+        "risks_or_unknowns",
+    ]
+
+    for row in rows:
+        item = dict(row)
+
+        for field in json_fields:
+            item[field] = json.loads(item[field] or "[]")
+
+        results.append(item)
+
+    return results
+
+def list_brand_research(
+    username: str,
+) -> list[dict]:
+    with connection() as db:
+        rows = db.execute(
+            """
+            SELECT *
+            FROM brand_research
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (username,),
+        ).fetchall()
+
+    results = []
+
+    json_fields = [
+        "products",
+        "target_markets",
+        "target_customers",
+        "recent_activity",
+        "creator_partnership_signals",
+        "partnership_requirements",
+        "why_now",
+        "evidence",
+        "risks_or_unknowns",
+    ]
+
+    for row in rows:
+        item = dict(row)
+
+        for field in json_fields:
+            item[field] = json.loads(item[field] or "[]")
+
+        results.append(item)
+
+    return results
+
+def list_fit_results(
+    username: str,
+) -> list[dict]:
+    with connection() as db:
+        rows = db.execute(
+            """
+            SELECT *
+            FROM fit_results
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (username,),
+        ).fetchall()
+
+    results = []
+
+    for row in rows:
+        item = dict(row)
+
+        item["strengths"] = json.loads(
+            item["strengths"] or "[]"
+        )
+        item["concerns"] = json.loads(
+            item["concerns"] or "[]"
+        )
+
+        results.append(item)
+
+    return results
+
+def get_brand_research(
+    username: str,
+    research_id: int,
+) -> Optional[dict]:
+    with connection() as db:
+        row = db.execute(
+            """
+            SELECT *
+            FROM brand_research
+            WHERE id = ? AND user_id = ?
+            """,
+            (research_id, username),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    research = dict(row)
+
+    json_fields = [
+        "products",
+        "target_markets",
+        "target_customers",
+        "recent_activity",
+        "creator_partnership_signals",
+        "partnership_requirements",
+        "why_now",
+        "evidence",
+        "risks_or_unknowns",
+    ]
+
+    for field in json_fields:
+        research[field] = (
+            json.loads(research[field])
+            if research[field]
+            else []
+        )
+
+    return research
+
+
+def get_fit_result(
+    username: str,
+    fit_id: int,
+) -> Optional[dict]:
+    with connection() as db:
+        row = db.execute(
+            """
+            SELECT *
+            FROM fit_results
+            WHERE id = ? AND user_id = ?
+            """,
+            (fit_id, username),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    fit = dict(row)
+
+    fit["strengths"] = (
+        json.loads(fit["strengths"])
+        if fit["strengths"]
+        else []
+    )
+
+    fit["concerns"] = (
+        json.loads(fit["concerns"])
+        if fit["concerns"]
+        else []
+    )
+
+    return fit
 
 init_db()

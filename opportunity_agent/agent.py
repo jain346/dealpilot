@@ -240,5 +240,6 @@ root_agent = Agent(
     instruction=OPPORTUNITY_AGENT_INSTRUCTION,
     input_schema=OpportunityInput,
     output_schema=OpportunityOutput,
+    output_key="last_opportunity_output",
     tools=[get_parallel_mcp_tools()],
 )

@@ -182,6 +182,7 @@ root_agent = Agent(
     mode='single_turn',
     input_schema=FitInput,
     output_schema=FitOutput,
+    output_key="last_fit_output",
     instruction=FIT_AGENT_INSTRUCTION,
 )
 

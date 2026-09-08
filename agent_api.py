@@ -11,7 +11,14 @@ from auth.models import UserInDB
 from state.models import CreatorProfile, CreatorProfileUpdate
 from state.profile import load_or_create_creator_profile, update_creator_profile
 from workflow import DealPilotWorkflow, WorkflowSessionNotFound
-
+from database import (
+    get_opportunity,
+    get_brand_research,
+    get_fit_result,
+    list_opportunities,
+    list_brand_research,
+    list_fit_results,
+)
 
 class AgentSession(BaseModel):
     session_id: str
@@ -40,6 +47,96 @@ class ConversationSummary(BaseModel):
     session_id: str
     created_at: str
 
+
+class OpportunityItem(BaseModel):
+    id: int
+    user_id: str
+    session_id: str
+
+    company_name: str
+    company_url: str | None = None
+
+    signal_type: str
+    opportunity_description: str
+
+    requirements: list[str] = Field(default_factory=list)
+
+    is_explicit_opportunity: bool
+
+    why_relevant: str
+    why_now: str | None = None
+
+    confidence: float
+    confidence_level: str
+
+    source_urls: list[str] = Field(default_factory=list)
+
+    status: str
+
+    created_at: str
+    updated_at: str
+
+
+class ResearchItem(BaseModel):
+    id: int
+    user_id: str
+    session_id: str
+
+    opportunity_id: int | None = None
+
+    company_name: str
+    company_url: str | None = None
+
+    status: str
+    parallel_task_id: str | None = None
+
+    summary: str | None = None
+
+    products: list[str] = Field(default_factory=list)
+    target_markets: list[str] = Field(default_factory=list)
+    target_customers: list[str] = Field(default_factory=list)
+    recent_activity: list[str] = Field(default_factory=list)
+
+    creator_partnership_signals: list[str] = Field(default_factory=list)
+    partnership_requirements: list[str] = Field(default_factory=list)
+    why_now: list[str] = Field(default_factory=list)
+
+    evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+    risks_or_unknowns: list[str] = Field(default_factory=list)
+
+    confidence: float | None = None
+
+    created_at: str
+    updated_at: str
+
+
+class FitItem(BaseModel):
+    id: int
+    user_id: str
+    session_id: str
+
+    opportunity_id: int | None = None
+    research_id: int | None = None
+
+    company_name: str
+
+    overall_score: float
+    audience_fit: float
+    content_fit: float
+    market_fit: float
+    partnership_fit: float
+    timing_fit: float
+
+    recommendation: str
+
+    strengths: list[str] = Field(default_factory=list)
+    concerns: list[str] = Field(default_factory=list)
+
+    reasoning: str
+
+    created_at: str
+    updated_at: str
 
 def normalize_agent_response(raw_response: str) -> dict[str, Any]:
     """Convert the plain text agent answer into a JSON-safe payload with markdown and links."""
@@ -103,4 +200,94 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
             raise HTTPException(status_code=404, detail="Session not found")
         return workflow.get_conversation(session_id)
 
+    @router.get("/opportunities",response_model=list[OpportunityItem],)
+    async def get_opportunities(
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        return list_opportunities(current_user.username)
+
+    @router.get(
+    "/opportunities/{opportunity_id}",
+    response_model=OpportunityItem,)
+    async def get_opportunity_detail(
+        opportunity_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        opportunity = get_opportunity(
+            current_user.username,
+            opportunity_id,
+        )
+
+        if opportunity is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Opportunity not found",
+            )
+
+        return opportunity
+
+    @router.get(
+    "/research",
+    response_model=list[ResearchItem],)
+    async def get_research(
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        return list_brand_research(
+            current_user.username
+        )
+
+    @router.get(
+    "/research/{research_id}",
+    response_model=ResearchItem,)
+    async def get_research_detail(
+        research_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        research = get_brand_research(
+            current_user.username,
+            research_id,
+        )
+
+        if research is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Research not found",
+            )
+
+        return research
+
+    @router.get(
+    "/fit",
+    response_model=list[FitItem],)
+    async def get_fit(
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        return list_fit_results(
+            current_user.username
+        )
+
+    @router.get(
+    "/fit/{fit_id}",
+    response_model=FitItem,)
+    async def get_fit_detail(
+        fit_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        fit = get_fit_result(
+            current_user.username,
+            fit_id,
+        )
+
+        if fit is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Fit result not found",
+            )
+
+        return fit
+    
     return router
+
+    
+
+

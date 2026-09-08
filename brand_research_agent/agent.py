@@ -229,5 +229,6 @@ root_agent = Agent(
     instruction=BRAND_RESEARCH_INSTRUCTION,
     input_schema=BrandResearchInput,
     output_schema=BrandResearchOutput,
+    output_key="last_brand_research_output",
     tools=[get_parallel_task_mcp_tools()],
 )
