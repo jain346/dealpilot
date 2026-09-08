@@ -138,6 +138,8 @@ class FitItem(BaseModel):
     created_at: str
     updated_at: str
 
+
+
 def normalize_agent_response(raw_response: str) -> dict[str, Any]:
     """Convert the plain text agent answer into a JSON-safe payload with markdown and links."""
     text = (raw_response or "").replace("\r\n", "\n").strip()
