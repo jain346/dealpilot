@@ -1914,10 +1914,14 @@ function SignalCard({
   opportunity,
   onResearch,
   onFit,
+  isResearched = false,
+  onFitDisabled,
 }: {
   opportunity: Opportunity;
   onResearch?: () => void;
   onFit?: () => void;
+  isResearched?: boolean;
+  onFitDisabled?: () => void;
 }) {
   const tone =
     opportunity.confidence_level.toLowerCase().includes("high") ||
@@ -2028,9 +2032,19 @@ function SignalCard({
           {onFit && (
             <button
               type="button"
-              className="btn-evaluate-fit"
+              className={`btn-evaluate-fit ${!isResearched ? "disabled" : ""}`}
+              aria-disabled={!isResearched}
+              title={
+                !isResearched
+                  ? "Research must be performed before fit analysis"
+                  : "Evaluate partnership fit"
+              }
               onClick={(e) => {
                 e.stopPropagation();
+                if (!isResearched) {
+                  onFitDisabled?.();
+                  return;
+                }
                 onFit();
               }}
             >
@@ -2056,11 +2070,22 @@ function OverviewPage({
   onNavigate: (page: Page, company?: string) => void;
   onStartChatAction?: (action: PendingChatAction) => void;
 }) {
+  const toast = useToast();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [researchList, setResearchList] = useState<Research[]>([]);
   const [fitList, setFitList] = useState<FitResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+
+  const isOpportunityResearched = (opp: Opportunity | null | undefined): boolean => {
+    if (!opp) return false;
+    return researchList.some(
+      (r) =>
+        (r.opportunity_id === opp.id ||
+          (r.company_name && opp.company_name && r.company_name.trim().toLowerCase() === opp.company_name.trim().toLowerCase())) &&
+        (r.status === "COMPLETED" || r.status === "DONE" || Boolean(r.summary) || (r.products && r.products.length > 0))
+    );
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -2172,6 +2197,10 @@ function OverviewPage({
             opportunity={featuredSignal}
             onResearch={() => handleAction("research", featuredSignal)}
             onFit={() => handleAction("fit", featuredSignal)}
+            isResearched={isOpportunityResearched(featuredSignal)}
+            onFitDisabled={() =>
+              toast.info("Firstly research has to be performed, after that fit analysis will be done.")
+            }
           />
         ) : (
           <p className="muted">
@@ -2303,9 +2332,19 @@ function OverviewPage({
                   ⚡ Run Deep Research
                 </button>
                 <button
-                  className="hero-action-btn secondary"
+                  className={`hero-action-btn secondary ${!isOpportunityResearched(selectedOpp) ? "disabled" : ""}`}
+                  aria-disabled={!isOpportunityResearched(selectedOpp)}
+                  title={
+                    !isOpportunityResearched(selectedOpp)
+                      ? "Research must be performed before fit analysis"
+                      : "Evaluate fit"
+                  }
                   onClick={() => {
                     const opp = selectedOpp!;
+                    if (!isOpportunityResearched(opp)) {
+                      toast.info("Firstly research has to be performed, after that fit analysis will be done.");
+                      return;
+                    }
                     setSelectedOpp(null);
                     handleAction("fit", opp);
                   }}
@@ -2374,6 +2413,8 @@ function OpportunitiesPage({
 }) {
   const toast = useToast();
   const [items, setItems] = useState<Opportunity[]>([]);
+  const [researchedCompanies, setResearchedCompanies] = useState<Set<string>>(new Set());
+  const [researchedOppIds, setResearchedOppIds] = useState<Set<number>>(new Set());
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorStr, setErrorStr] = useState<string | null>(null);
@@ -2383,27 +2424,50 @@ function OpportunitiesPage({
   const [activeFilter, setActiveFilter] = useState<"all" | "high" | "direct">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchItems = () => {
+  const fetchItems = async () => {
     setLoading(true);
     setErrorStr(null);
-    void request<Opportunity[]>("/agent/opportunities", {
-      headers: authHeaders(),
-    })
-      .then((result) => {
-        setItems(dedupeByCompany(result));
-        setLoading(false);
-      })
-      .catch((err) => {
-        setLoading(false);
-        const msg = err instanceof Error ? err.message : "Unable to load opportunities";
-        setErrorStr(msg);
-        toastForError(toast, err, "Unable to load opportunities");
-      });
+    try {
+      const [oppResult, researchResult] = await Promise.all([
+        request<Opportunity[]>("/agent/opportunities", { headers: authHeaders() }),
+        request<Research[]>("/agent/research", { headers: authHeaders() }).catch(() => [] as Research[]),
+      ]);
+      setItems(dedupeByCompany(oppResult));
+
+      const compSet = new Set<string>();
+      const idSet = new Set<number>();
+      for (const r of researchResult) {
+        if (
+          r.status === "COMPLETED" ||
+          r.status === "DONE" ||
+          Boolean(r.summary) ||
+          (Array.isArray(r.products) && r.products.length > 0)
+        ) {
+          if (r.company_name) compSet.add(r.company_name.trim().toLowerCase());
+          if (r.opportunity_id) idSet.add(r.opportunity_id);
+        }
+      }
+      setResearchedCompanies(compSet);
+      setResearchedOppIds(idSet);
+      setLoading(false);
+    } catch (err) {
+      setLoading(false);
+      const msg = err instanceof Error ? err.message : "Unable to load opportunities";
+      setErrorStr(msg);
+      toastForError(toast, err, "Unable to load opportunities");
+    }
   };
 
   useEffect(() => {
-    fetchItems();
+    void fetchItems();
   }, []);
+
+  const isOpportunityResearched = (opp: Opportunity | null | undefined): boolean => {
+    if (!opp) return false;
+    if (researchedOppIds.has(opp.id)) return true;
+    if (opp.company_name && researchedCompanies.has(opp.company_name.trim().toLowerCase())) return true;
+    return false;
+  };
 
   const select = async (id: number) => {
     try {
@@ -2542,6 +2606,10 @@ function OpportunitiesPage({
                   opportunity={item}
                   onResearch={() => runAction("research", item)}
                   onFit={() => runAction("fit", item)}
+                  isResearched={isOpportunityResearched(item)}
+                  onFitDisabled={() =>
+                    toast.info("Firstly research has to be performed, after that fit analysis will be done.")
+                  }
                 />
               </div>
             ))}
@@ -2701,9 +2769,19 @@ function OpportunitiesPage({
                   Research brand
                 </button>
                 <button
-                  className="button primary"
+                  className={`button primary ${!isOpportunityResearched(selected) ? "disabled-btn" : ""}`}
+                  aria-disabled={!isOpportunityResearched(selected)}
+                  title={
+                    !isOpportunityResearched(selected)
+                      ? "Research must be performed before fit analysis"
+                      : "Evaluate fit"
+                  }
                   onClick={() => {
                     const item = selected;
+                    if (!isOpportunityResearched(item)) {
+                      toast.info("Firstly research has to be performed, after that fit analysis will be done.");
+                      return;
+                    }
                     setSelected(null);
                     runAction("fit", item);
                   }}
@@ -3395,9 +3473,7 @@ function ChatPage({
   globalBusyRef?: React.MutableRefObject<boolean>;
 }) {
   const toast = useToast();
-  const [session, setSession] = useState<string | null>(
-    localStorage.getItem(storage.session),
-  );
+  const [session, setSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitles, setSessionTitles] = useState<Record<string, string>>({});
   const [input, setInput] = useState("");
@@ -3571,10 +3647,6 @@ function ChatPage({
       setSession(null);
     }
   };
-
-  useEffect(() => {
-    void loadMessages(localStorage.getItem(storage.session));
-  }, []);
 
   useEffect(() => {
     if (!conversations || conversations.length === 0) return;
@@ -4143,22 +4215,8 @@ function AppShell({
   onLogout: () => void;
 }) {
   const toast = useToast();
-  const [page, setPageState] = useState<Page>(() => {
-    const saved = localStorage.getItem(storage.page) as Page | null;
-    const validPages: Page[] = [
-      "overview",
-      "opportunities",
-      "research",
-      "fit",
-      "conversations",
-      "profile",
-      "settings",
-    ];
-    if (saved && validPages.includes(saved)) {
-      return saved;
-    }
-    return isProfileComplete(profile) ? "conversations" : "profile";
-  });
+  // When an existing user arrives on the website, they see the new conversation page
+  const [page, setPageState] = useState<Page>("conversations");
 
   const setPage = (newPage: Page) => {
     localStorage.setItem(storage.page, newPage);

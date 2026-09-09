@@ -4977,3 +4977,39 @@ select:disabled {
   background: #4c6ef5;
   box-shadow: 0 4px 14px rgba(76, 110, 245, 0.5);
 }
+
+.btn-evaluate-fit.disabled,
+.btn-evaluate-fit[aria-disabled="true"] {
+  background: #182234 !important;
+  color: #64748b !important;
+  border-color: #243247 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.65;
+}
+
+.btn-evaluate-fit.disabled:hover,
+.btn-evaluate-fit[aria-disabled="true"]:hover {
+  background: #1d293e !important;
+  border-color: #2b3b53 !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .btn-evaluate-fit.disabled,
+[data-theme="light"] .btn-evaluate-fit[aria-disabled="true"] {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.button.disabled-btn,
+.button[aria-disabled="true"],
+.hero-action-btn.secondary.disabled,
+.hero-action-btn[aria-disabled="true"] {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.6);
+}
