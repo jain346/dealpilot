@@ -120,6 +120,7 @@ class DealPilotWorkflow:
         from state.profile import load_or_create_creator_profile
         from datetime import datetime, timezone
 
+        await self.session_service.prepare_tables()
         profile = load_or_create_creator_profile(user_id)
         schema = self.session_service._get_schema_classes()
         now = datetime.now(timezone.utc)

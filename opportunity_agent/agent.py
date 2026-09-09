@@ -231,7 +231,7 @@ Do not add markdown or prose outside the structured output.
 
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model=os.environ.get("DEALPILOT_OPP_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.6-flash")),
     name='opportunity_agent',
     description=(
         "Discovers current sponsorship, partnership, affiliate, ambassador, "

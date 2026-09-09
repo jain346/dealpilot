@@ -1,0 +1,28 @@
+# Python environments and caches
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Git and OS metadata
+.git/
+.gitignore
+.DS_Store
+.vscode/
+.idea/
+
+# Node and frontend development artifacts
+frontend/dealpilot-ui/node_modules/
+frontend/dealpilot-ui/dist/
+
+# Local sensitive files
+.env
+*.log
+
+# ADK internal directory
+.adk/

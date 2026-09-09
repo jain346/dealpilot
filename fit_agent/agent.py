@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
@@ -171,7 +172,7 @@ Return only the configured FitOutput.
 """
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model=os.environ.get("DEALPILOT_FIT_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.7-flash")),
     name='fit_agent',
     description=(
         "Evaluates whether a researched brand is a strong sponsorship "

@@ -40,3 +40,20 @@ The original local CLI remains available with `python run_agent.py`.
 
 
 uvicorn run_agent:app --reload
+
+PROJECT_ID=$(gcloud config get-value project)
+
+gcloud run deploy dealpilot \
+  --source . \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 2 \
+  --timeout 300 \
+  --set-env-vars \
+GOOGLE_GENAI_USE_ENTERPRISE="TRUE",\
+GOOGLE_CLOUD_PROJECT="${PROJECT_ID}",\
+GOOGLE_CLOUD_LOCATION="us",\
+PARALLEL_API_KEY="",\
+DEALPILOT_JWT_SECRET="$(openssl rand -hex 32)"

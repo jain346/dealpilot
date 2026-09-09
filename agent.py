@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -639,7 +640,7 @@ with the minimum unnecessary work and maximum evidence quality.
 
 
 root_agent = Agent(
-    model="gemini-3.7-flash",
+    model=os.environ.get("DEALPILOT_DIRECTOR_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.7-flash")),
     name="dealpilot_director",
     description=(
         "Coordinates DealPilot's opportunity discovery, company research, "

@@ -36,6 +36,13 @@ app = FastAPI(title="DealPilot API")
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(create_agent_router(workflow))
 
+@app.on_event("startup")
+async def on_startup():
+    try:
+        await workflow.session_service.prepare_tables()
+    except Exception as e:
+        logger.warning(f"Database session table preparation warning: {e}")
+
 frontend_dist = Path(__file__).parent / "frontend" / "dealpilot-ui" / "dist"
 if (frontend_dist / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="frontend-assets")
