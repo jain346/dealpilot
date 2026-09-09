@@ -38,6 +38,7 @@ class BrandResearchInput(BaseModel):
     )
 
 
+
 class Source(BaseModel):
     title: str
     url: str

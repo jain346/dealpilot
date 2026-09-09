@@ -154,8 +154,6 @@ def init_db() -> None:
 
                 status TEXT NOT NULL DEFAULT 'COMPLETED',
 
-                parallel_task_id TEXT,
-
                 summary TEXT,
 
                 products TEXT NOT NULL DEFAULT '[]',
@@ -180,10 +178,6 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS brand_research_session_idx
                 ON brand_research(session_id);
-
-            CREATE INDEX IF NOT EXISTS brand_research_task_idx
-                ON brand_research(parallel_task_id);
-
 
             CREATE TABLE IF NOT EXISTS fit_results (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -228,6 +222,65 @@ def init_db() -> None:
             """
         )
 
+        db.execute("DROP INDEX IF EXISTS brand_research_task_idx")
+        research_columns = {
+            row[1] for row in db.execute("PRAGMA table_info(brand_research)")
+        }
+        if "parallel_task_id" in research_columns:
+            db.execute("ALTER TABLE brand_research DROP COLUMN parallel_task_id")
+
+        # Clean up duplicates: run as individual execute() calls so they share
+        # the same connection transaction.  executescript() issues an implicit
+        # COMMIT before each statement, so DELETE + CREATE INDEX end up in
+        # separate transactions — the index creation would see pre-DELETE data
+        # and raise IntegrityError.  Using execute() here means the DELETE's
+        # effect is visible when CREATE UNIQUE INDEX validates the table.
+        db.execute(
+            "DELETE FROM opportunities WHERE id NOT IN ("
+            "SELECT MAX(id) FROM opportunities GROUP BY user_id, lower(company_name))"
+        )
+        db.execute(
+            "DELETE FROM brand_research WHERE id NOT IN ("
+            "SELECT MIN(id) FROM brand_research WHERE opportunity_id IS NOT NULL "
+            "GROUP BY user_id, opportunity_id) AND opportunity_id IS NOT NULL"
+        )
+        db.execute(
+            "DELETE FROM brand_research WHERE id NOT IN ("
+            "SELECT MIN(id) FROM brand_research WHERE opportunity_id IS NULL "
+            "GROUP BY user_id, lower(company_name)) AND opportunity_id IS NULL"
+        )
+        db.execute(
+            "DELETE FROM fit_results WHERE id NOT IN ("
+            "SELECT MAX(id) FROM fit_results GROUP BY user_id, lower(company_name))"
+        )
+        db.execute(
+            "DELETE FROM brand_research WHERE status = 'IN_PROGRESS' AND id NOT IN ("
+            "SELECT MIN(id) FROM brand_research WHERE status = 'IN_PROGRESS' GROUP BY user_id)"
+        )
+
+        # Create / refresh unique indexes.  Each is wrapped in its own
+        # try/except so a pre-existing index or a rare duplicate that the
+        # DELETE above missed never crashes startup.
+        for _stmt in [
+            "DROP INDEX IF EXISTS opportunities_logical_key_idx",
+            "CREATE UNIQUE INDEX IF NOT EXISTS opportunities_company_key_idx"
+            " ON opportunities(user_id, lower(company_name))",
+            "CREATE UNIQUE INDEX IF NOT EXISTS brand_research_opportunity_key_idx"
+            " ON brand_research(user_id, opportunity_id) WHERE opportunity_id IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS brand_research_company_key_idx"
+            " ON brand_research(user_id, lower(company_name)) WHERE opportunity_id IS NULL",
+            "DROP INDEX IF EXISTS fit_results_logical_key_idx",
+            "DROP INDEX IF EXISTS fit_results_company_key_idx",
+            "CREATE UNIQUE INDEX IF NOT EXISTS fit_results_company_key_idx"
+            " ON fit_results(user_id, lower(company_name))",
+            "CREATE UNIQUE INDEX IF NOT EXISTS brand_research_active_user_idx"
+            " ON brand_research(user_id) WHERE status = 'IN_PROGRESS'",
+        ]:
+            try:
+                db.execute(_stmt)
+            except Exception:
+                pass  # index already exists or rare edge-case dup; non-fatal
+
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -240,6 +293,16 @@ def get_user(username: str) -> Optional[dict[str, Optional[str]]]:
             (username,),
         ).fetchone()
     return dict(row) if row else None
+
+
+def get_user_by_email(email: str) -> Optional[dict[str, Optional[str]]]:
+    with connection() as db:
+        row = db.execute(
+            "SELECT username, email, hashed_password FROM users WHERE email = ?",
+            (email,),
+        ).fetchone()
+    return dict(row) if row else None
+
 
 
 def create_user(
@@ -302,6 +365,17 @@ def get_conversations(username: str) -> list[dict[str, str]]:
             (username,),
         ).fetchall()
     return [dict(row) for row in rows]
+
+
+def delete_conversation(session_id: str, username: str) -> bool:
+    """Delete a conversation and its cascading messages if owned by user."""
+    with connection() as db:
+        cursor = db.execute(
+            "DELETE FROM conversations WHERE session_id = ? AND username = ?",
+            (session_id, username),
+        )
+        return cursor.rowcount > 0
+
 
 def get_creator_profile(username: str) -> Optional[dict]:
     with connection() as db:
@@ -465,20 +539,29 @@ def list_opportunities(
     username: str,
     status: str | None = None,
 ) -> list[dict]:
+    """Return the most-recently-updated opportunity per company for this user."""
 
     query = """
-        SELECT *
-        FROM opportunities
-        WHERE user_id = ?
+        SELECT o.*
+        FROM opportunities o
+        INNER JOIN (
+            SELECT lower(company_name) AS norm, MAX(updated_at) AS max_updated
+            FROM opportunities
+            WHERE user_id = ?
+            GROUP BY lower(company_name)
+        ) AS latest
+          ON lower(o.company_name) = latest.norm
+         AND o.updated_at = latest.max_updated
+        WHERE o.user_id = ?
     """
 
-    params: list = [username]
+    params: list = [username, username]
 
     if status:
-        query += " AND status = ?"
+        query += " AND o.status = ?"
         params.append(status)
 
-    query += " ORDER BY updated_at DESC"
+    query += " ORDER BY o.updated_at DESC"
 
     with connection() as db:
         rows = db.execute(query, params).fetchall()
@@ -535,56 +618,51 @@ def get_opportunity(
     return item
 
 
-def list_brand_research(
-    username: str,
-) -> list[dict]:
+def delete_opportunity(username: str, opportunity_id: int) -> str | None:
     with connection() as db:
-        rows = db.execute(
+        row = db.execute(
+            "SELECT id FROM opportunities WHERE id = ? AND user_id = ?",
+            (opportunity_id, username),
+        ).fetchone()
+        if row is None:
+            return None
+        active_research = db.execute(
             """
-            SELECT *
-            FROM brand_research
-            WHERE user_id = ?
-            ORDER BY updated_at DESC
+            SELECT 1 FROM brand_research
+            WHERE opportunity_id = ? AND user_id = ? AND status = 'IN_PROGRESS'
+            LIMIT 1
             """,
-            (username,),
-        ).fetchall()
+            (opportunity_id, username),
+        ).fetchone()
+        if active_research is not None:
+            return "IN_PROGRESS"
+        db.execute("DELETE FROM fit_results WHERE opportunity_id = ? AND user_id = ?", (opportunity_id, username))
+        db.execute("DELETE FROM brand_research WHERE opportunity_id = ? AND user_id = ?", (opportunity_id, username))
+        db.execute("DELETE FROM opportunities WHERE id = ? AND user_id = ?", (opportunity_id, username))
+        return "DELETED"
 
-    results = []
-
-    json_fields = [
-        "products",
-        "target_markets",
-        "target_customers",
-        "recent_activity",
-        "creator_partnership_signals",
-        "partnership_requirements",
-        "why_now",
-        "evidence",
-        "risks_or_unknowns",
-    ]
-
-    for row in rows:
-        item = dict(row)
-
-        for field in json_fields:
-            item[field] = json.loads(item[field] or "[]")
-
-        results.append(item)
-
-    return results
 
 def list_brand_research(
     username: str,
 ) -> list[dict]:
+    """Return the most-recently-updated research record per company for this user."""
     with connection() as db:
         rows = db.execute(
             """
-            SELECT *
-            FROM brand_research
-            WHERE user_id = ?
-            ORDER BY updated_at DESC
+            SELECT br.*
+            FROM brand_research br
+            INNER JOIN (
+                SELECT lower(company_name) AS norm, MAX(updated_at) AS max_updated
+                FROM brand_research
+                WHERE user_id = ?
+                GROUP BY lower(company_name)
+            ) AS latest
+              ON lower(br.company_name) = latest.norm
+             AND br.updated_at = latest.max_updated
+            WHERE br.user_id = ?
+            ORDER BY br.updated_at DESC
             """,
-            (username,),
+            (username, username),
         ).fetchall()
 
     results = []
@@ -614,15 +692,24 @@ def list_brand_research(
 def list_fit_results(
     username: str,
 ) -> list[dict]:
+    """Return the most-recently-updated fit result per company for this user."""
     with connection() as db:
         rows = db.execute(
             """
-            SELECT *
-            FROM fit_results
-            WHERE user_id = ?
-            ORDER BY updated_at DESC
+            SELECT fr.*
+            FROM fit_results fr
+            INNER JOIN (
+                SELECT lower(company_name) AS norm, MAX(updated_at) AS max_updated
+                FROM fit_results
+                WHERE user_id = ?
+                GROUP BY lower(company_name)
+            ) AS latest
+              ON lower(fr.company_name) = latest.norm
+             AND fr.updated_at = latest.max_updated
+            WHERE fr.user_id = ?
+            ORDER BY fr.updated_at DESC
             """,
-            (username,),
+            (username, username),
         ).fetchall()
 
     results = []
@@ -682,6 +769,21 @@ def get_brand_research(
     return research
 
 
+def delete_brand_research(username: str, research_id: int) -> str | None:
+    with connection() as db:
+        row = db.execute(
+            "SELECT status FROM brand_research WHERE id = ? AND user_id = ?",
+            (research_id, username),
+        ).fetchone()
+        if row is None:
+            return None
+        # if row["status"] == "IN_PROGRESS":
+        #     return "IN_PROGRESS"
+        db.execute("DELETE FROM fit_results WHERE research_id = ? AND user_id = ?", (research_id, username))
+        db.execute("DELETE FROM brand_research WHERE id = ? AND user_id = ?", (research_id, username))
+        return "DELETED"
+
+
 def get_fit_result(
     username: str,
     fit_id: int,
@@ -714,5 +816,14 @@ def get_fit_result(
     )
 
     return fit
+
+
+def delete_fit_result(username: str, fit_id: int) -> bool:
+    with connection() as db:
+        cursor = db.execute(
+            "DELETE FROM fit_results WHERE id = ? AND user_id = ?",
+            (fit_id, username),
+        )
+        return cursor.rowcount > 0
 
 init_db()

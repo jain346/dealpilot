@@ -187,9 +187,9 @@ Return a confidence score from 0.0 to 1.0.
 
 Use:
 
-0.85–1.00 = HIGH
-0.60–0.84 = MEDIUM
-below 0.60 = LOW
+0.90–1.00 = HIGH
+0.70–0.89 = MEDIUM
+below 0.70 = LOW
 
 Confidence measures evidence strength, recency, and specificity.
 It is NOT simply a measure of how well the brand matches the creator.

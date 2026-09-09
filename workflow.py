@@ -19,14 +19,21 @@ from database import (
     create_conversation,
     adk_database_url,
     get_conversations,
+    delete_conversation,
     get_messages,
     get_user,
+    get_opportunity,
+    get_brand_research,
+    list_brand_research,
+    list_fit_results,
     user_owns_conversation,
 )
 
 from state.business_persistence import (
     save_opportunity_output,
     save_brand_research_output,
+    save_brand_research_job,
+    save_brand_research_job,
     save_fit_output,
 )
 
@@ -57,16 +64,35 @@ def _parse_agent_output(value):
             try:
                 return json.loads(text)
             except json.JSONDecodeError:
-                logger.warning(
-                    "agent_output_not_json",
-                    extra={"output_chars": len(text)},
-                )
-                return None
+                fenced = text.replace("```json", "").replace("```", "").strip()
+                try:
+                    return json.loads(fenced)
+                except json.JSONDecodeError:
+                    start = fenced.find("{")
+                    end = fenced.rfind("}")
+                    if start >= 0 and end > start:
+                        try:
+                            return json.loads(fenced[start : end + 1])
+                        except json.JSONDecodeError:
+                            pass
+                    logger.warning(
+                        "agent_output_not_json",
+                        extra={"output_chars": len(text)},
+                    )
+                    return None
 
         return None
 
 class WorkflowSessionNotFound(Exception):
     """Raised when a user tries to use a session they do not own."""
+
+
+class WorkflowActionPending(Exception):
+    """Raised when an asynchronous specialist job has not completed yet."""
+
+
+class WorkflowActionInProgress(Exception):
+    """Raised when this user already has a research action in progress."""
 
 
 class DealPilotWorkflow:
@@ -119,9 +145,142 @@ class DealPilotWorkflow:
         """Return only conversations owned by this user."""
         return get_conversations(user_id)
 
-    
+    def delete_session(self, user_id: str, session_id: str) -> bool:
+        """Delete a conversation session if owned by user."""
+        return delete_conversation(session_id, user_id)
 
-    async def run_message(self,user_id: str,session_id: str,message: str,) -> str:
+    async def research_opportunity(
+        self,
+        user_id: str,
+        opportunity_id: int,
+        session_id: str | None = None,
+    ) -> int:
+        """Research an owned opportunity and persist the structured result."""
+        opportunity = get_opportunity(user_id, opportunity_id)
+        if opportunity is None:
+            raise WorkflowSessionNotFound
+
+        existing_research = next(
+            (item for item in list_brand_research(user_id) if item.get("opportunity_id") == opportunity_id),
+            None,
+        )
+        if existing_research is not None and existing_research.get("status") == "COMPLETED":
+            return existing_research["id"]
+
+        active_research = next(
+            (item for item in list_brand_research(user_id) if item.get("status") == "IN_PROGRESS"),
+            None,
+        )
+        if active_research is not None and active_research.get("id") != (existing_research or {}).get("id"):
+            raise WorkflowActionInProgress(
+                "A brand research job is already in progress. Please wait for it to complete."
+            )
+
+        target_session_id = session_id or (existing_research["session_id"] if existing_research else await self.create_session(user_id))
+        runner_session_id = await self.create_session(user_id)
+        try:
+            response = await self.run_message(
+                user_id,
+                runner_session_id,
+                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}.",
+                opportunity_id=opportunity_id,
+                persist_session_id=target_session_id,
+            )
+            research = next(
+                (item for item in list_brand_research(user_id) if item.get("opportunity_id") == opportunity_id),
+                None,
+            )
+            if research is None:
+                if response:
+                    return save_brand_research_job(
+                        username=user_id,
+                        session_id=target_session_id,
+                        company_name=opportunity["company_name"],
+                        company_url=opportunity.get("company_url"),
+                        opportunity_id=opportunity_id,
+                    )
+                raise WorkflowActionPending("Brand research is still in progress. Try again when it completes.")
+            return research["id"]
+        finally:
+            self.delete_session(user_id, runner_session_id)
+
+    async def evaluate_opportunity_fit(
+        self,
+        user_id: str,
+        opportunity_id: int,
+        session_id: str | None = None,
+    ) -> int:
+        """Evaluate fit for an owned opportunity, researching it first if needed."""
+        opportunity = get_opportunity(user_id, opportunity_id)
+        if opportunity is None:
+            raise WorkflowSessionNotFound
+
+        existing_research = next(
+            (item for item in list_brand_research(user_id) if item.get("opportunity_id") == opportunity_id),
+            None,
+        )
+        active_research = next(
+            (item for item in list_brand_research(user_id) if item.get("status") == "IN_PROGRESS"),
+            None,
+        )
+        if active_research is not None and active_research.get("opportunity_id") != opportunity_id:
+            raise WorkflowActionInProgress(
+                "A brand research job is already in progress. Fit evaluation is unavailable until it completes."
+            )
+
+        research = next(
+            (item for item in [existing_research] if item is not None),
+            None,
+        )
+        if research is None:
+            research_id = await self.research_opportunity(user_id, opportunity_id, session_id=session_id)
+            research = get_brand_research(user_id, research_id)
+        if research is None:
+            raise RuntimeError("Research was not available for fit evaluation")
+        if research.get("status") != "COMPLETED":
+            raise WorkflowActionPending("Research is still in progress. Try Evaluate fit again when it is completed.")
+
+        existing_fit = next(
+            (
+                item for item in list_fit_results(user_id)
+                if item.get("opportunity_id") == opportunity_id
+                and item.get("research_id") == research["id"]
+            ),
+            None,
+        )
+        if existing_fit is not None:
+            return existing_fit["id"]
+
+        target_session_id = session_id or await self.create_session(user_id)
+        runner_session_id = await self.create_session(user_id)
+        try:
+            await self.run_message(
+                user_id,
+                runner_session_id,
+                f"Evaluate creator-brand fit using the fit_agent for this opportunity. Reuse this completed brand research and do not browse or research another company. Company: {opportunity['company_name']}. Opportunity ID: {opportunity_id}. Research ID: {research['id']}. Research JSON: {json.dumps(research)}. Return and persist the structured fit result.",
+                opportunity_id=opportunity_id,
+                research_id=research["id"],
+                persist_session_id=target_session_id,
+            )
+            fit = next(
+                (item for item in list_fit_results(user_id) if item.get("opportunity_id") == opportunity_id and item.get("research_id") == research["id"]),
+                None,
+            )
+            if fit is None:
+                raise RuntimeError("Fit evaluation did not return a structured result")
+            return fit["id"]
+        finally:
+            self.delete_session(user_id, runner_session_id)
+
+    async def run_message(
+        self,
+        user_id: str,
+        session_id: str,
+        message: str,
+        opportunity_id: int | None = None,
+        research_id: int | None = None,
+        persist_session_id: str | None = None,
+    ) -> str:
         """Run the Director workflow and persist specialist outputs."""
 
         lock = self._session_locks[(user_id, session_id)]
@@ -309,18 +468,20 @@ class DealPilotWorkflow:
                 )
 
                 if research_output:
+                    storage_session_id = persist_session_id or session_id
                     try:
                         save_brand_research_output(
                             username=user_id,
-                            session_id=session_id,
+                            session_id=storage_session_id,
                             output=research_output,
+                            opportunity_id=opportunity_id,
                         )
 
                         logger.info(
                             "brand_research_output_persisted",
                             extra={
                                 "user_id": user_id,
-                                "session_id": session_id,
+                                "session_id": storage_session_id,
                             },
                         )
 
@@ -329,7 +490,7 @@ class DealPilotWorkflow:
                             "brand_research_persistence_failed",
                             extra={
                                 "user_id": user_id,
-                                "session_id": session_id,
+                                "session_id": storage_session_id,
                             },
                         )
 
@@ -352,18 +513,25 @@ class DealPilotWorkflow:
                 )
 
                 if fit_output:
+                    storage_session_id = persist_session_id or session_id
                     try:
+                        if "company_name" not in fit_output and opportunity_id is not None:
+                            linked_opportunity = get_opportunity(user_id, opportunity_id)
+                            if linked_opportunity is not None:
+                                fit_output["company_name"] = linked_opportunity["company_name"]
                         save_fit_output(
                             username=user_id,
-                            session_id=session_id,
+                            session_id=storage_session_id,
                             output=fit_output,
+                            opportunity_id=opportunity_id,
+                            research_id=research_id,
                         )
 
                         logger.info(
                             "fit_output_persisted",
                             extra={
                                 "user_id": user_id,
-                                "session_id": session_id,
+                                "session_id": storage_session_id,
                             },
                         )
 

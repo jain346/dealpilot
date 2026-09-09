@@ -10,8 +10,17 @@ from auth.middleware import get_current_user
 from auth.models import UserInDB
 from state.models import CreatorProfile, CreatorProfileUpdate
 from state.profile import load_or_create_creator_profile, update_creator_profile
-from workflow import DealPilotWorkflow, WorkflowSessionNotFound
+from workflow import (
+    DealPilotWorkflow,
+    WorkflowActionInProgress,
+    WorkflowActionPending,
+    WorkflowSessionNotFound,
+)
 from database import (
+    add_message,
+    delete_brand_research,
+    delete_fit_result,
+    delete_opportunity,
     get_opportunity,
     get_brand_research,
     get_fit_result,
@@ -88,8 +97,6 @@ class ResearchItem(BaseModel):
     company_url: str | None = None
 
     status: str
-    parallel_task_id: str | None = None
-
     summary: str | None = None
 
     products: list[str] = Field(default_factory=list)
@@ -165,6 +172,11 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
     async def list_sessions(current_user: UserInDB = Depends(get_current_user)):
         return workflow.get_user_conversations(current_user.username)
 
+    @router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_session(session_id: str, current_user: UserInDB = Depends(get_current_user)):
+        if not workflow.delete_session(current_user.username, session_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
     @router.get("/profile", response_model=ProfileResponse)
     async def get_profile(current_user: UserInDB = Depends(get_current_user)):
         return load_or_create_creator_profile(current_user.username)
@@ -202,6 +214,20 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
             raise HTTPException(status_code=404, detail="Session not found")
         return workflow.get_conversation(session_id)
 
+    @router.post("/sessions/{session_id}/custom_message", status_code=status.HTTP_201_CREATED)
+    async def append_custom_message(
+        session_id: str,
+        payload: dict[str, Any],
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        if not workflow.user_owns_session(current_user.username, session_id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        role = payload.get("role", "assistant")
+        content = payload.get("content", "")
+        if content:
+            add_message(session_id, role, content)
+        return {"status": "ok"}
+
     @router.get("/opportunities",response_model=list[OpportunityItem],)
     async def get_opportunities(
         current_user: UserInDB = Depends(get_current_user),
@@ -227,6 +253,73 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
             )
 
         return opportunity
+
+    @router.delete("/opportunities/{opportunity_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def remove_opportunity(
+        opportunity_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        result = delete_opportunity(current_user.username, opportunity_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        if result == "IN_PROGRESS":
+            raise HTTPException(
+                status_code=409,
+                detail="This opportunity has research in progress and cannot be deleted yet.",
+            )
+
+    @router.post(
+        "/opportunities/{opportunity_id}/research",
+        response_model=ResearchItem,
+    )
+    async def research_opportunity(
+        opportunity_id: int,
+        session_id: str | None = None,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        try:
+            research_id = await workflow.research_opportunity(
+                current_user.username,
+                opportunity_id,
+                session_id=session_id,
+            )
+        except WorkflowSessionNotFound:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        except WorkflowActionInProgress as error:
+            raise HTTPException(status_code=409, detail=str(error))
+        except RuntimeError as error:
+            raise HTTPException(status_code=502, detail=str(error))
+
+        return get_brand_research(current_user.username, research_id)
+
+    @router.post(
+        "/opportunities/{opportunity_id}/fit",
+        response_model=FitItem,
+    )
+    async def evaluate_opportunity_fit(
+        opportunity_id: int,
+        session_id: str | None = None,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        try:
+            fit_id = await workflow.evaluate_opportunity_fit(
+                current_user.username,
+                opportunity_id,
+                session_id=session_id,
+            )
+        except WorkflowSessionNotFound:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        except WorkflowActionInProgress as error:
+            raise HTTPException(status_code=409, detail=str(error))
+        except WorkflowActionPending as error:
+            raise HTTPException(status_code=409, detail=str(error))
+        except RuntimeError as error:
+            raise HTTPException(status_code=502, detail=str(error))
+
+        fit = get_fit_result(current_user.username, fit_id)
+        if fit is None:
+            raise HTTPException(status_code=404, detail="Fit result not found")
+        return fit
 
     @router.get(
     "/research",
@@ -258,6 +351,71 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
 
         return research
 
+    @router.delete("/research/{research_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def remove_research(
+        research_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        result = delete_brand_research(current_user.username, research_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Research not found")
+
+    @router.post("/research/{research_id}/fit", response_model=FitItem)
+    async def evaluate_research_fit(
+        research_id: int,
+        session_id: str | None = None,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        research = get_brand_research(current_user.username, research_id)
+        if research is None:
+            raise HTTPException(status_code=404, detail="Research not found")
+        
+        opp_id = research.get("opportunity_id")
+        if opp_id:
+            try:
+                fit_id = await workflow.evaluate_opportunity_fit(
+                    current_user.username,
+                    opp_id,
+                    session_id=session_id,
+                )
+                fit = get_fit_result(current_user.username, fit_id)
+                if fit is None:
+                    raise HTTPException(status_code=404, detail="Fit result not found")
+                return fit
+            except WorkflowActionInProgress as error:
+                raise HTTPException(status_code=409, detail=str(error))
+            except WorkflowActionPending as error:
+                raise HTTPException(status_code=409, detail=str(error))
+            except RuntimeError as error:
+                raise HTTPException(status_code=502, detail=str(error))
+
+        existing_fit = next(
+            (item for item in list_fit_results(current_user.username) if item.get("research_id") == research_id),
+            None,
+        )
+        if existing_fit is not None:
+            return existing_fit
+
+        target_session_id = session_id or await workflow.create_session(current_user.username)
+        runner_session_id = await workflow.create_session(current_user.username)
+        try:
+            await workflow.run_message(
+                current_user.username,
+                runner_session_id,
+                f"Evaluate creator-brand fit using the fit_agent for this company. Reuse this completed brand research and do not browse or research another company. Company: {research['company_name']}. Research ID: {research_id}. Research JSON: {json.dumps(research)}. Return and persist the structured fit result.",
+                research_id=research_id,
+                persist_session_id=target_session_id,
+            )
+            fit = next(
+                (item for item in list_fit_results(current_user.username) if item.get("research_id") == research_id),
+                None,
+            )
+            if fit is None:
+                raise HTTPException(status_code=500, detail="Fit evaluation could not be completed")
+            return fit
+        finally:
+            workflow.delete_session(current_user.username, runner_session_id)
+
     @router.get(
     "/fit",
     response_model=list[FitItem],)
@@ -287,6 +445,14 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
             )
 
         return fit
+
+    @router.delete("/fit/{fit_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def remove_fit(
+        fit_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        if not delete_fit_result(current_user.username, fit_id):
+            raise HTTPException(status_code=404, detail="Fit result not found")
     
     return router
 
