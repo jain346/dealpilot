@@ -1351,22 +1351,60 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
     event.preventDefault();
     setBusy(true);
     setError("");
+
+    const username = form.username.trim();
+    const email = form.email.trim().toLowerCase();
+    const password = form.password;
+
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+
+    if (mode === "signup") {
+      if (!username || username.length < 3) {
+        setError("Username must be at least 3 characters long.");
+        setBusy(false);
+        return;
+      }
+      if (!email) {
+        setError("Please enter your Gmail address.");
+        setBusy(false);
+        return;
+      }
+      if (!gmailRegex.test(email)) {
+        setError("Only @gmail.com email addresses are allowed (e.g. yourname@gmail.com).");
+        setBusy(false);
+        return;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters long.");
+        setBusy(false);
+        return;
+      }
+    } else {
+      // In login mode: if user types an email address, ensure it is @gmail.com
+      if (username.includes("@") && !gmailRegex.test(username)) {
+        setError("Only @gmail.com email addresses are allowed.");
+        setBusy(false);
+        return;
+      }
+    }
+
     try {
-      if (mode === "signup")
+      if (mode === "signup") {
         await request("/auth/signup", {
           method: "POST",
           body: JSON.stringify({
-            username: form.username.trim(),
-            email: form.email.trim() || null,
-            password: form.password,
+            username: username,
+            email: email,
+            password: password,
           }),
         });
+      }
       const login = await request<{ access_token: string }>("/auth/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-          username: form.username.trim(),
-          password: form.password,
+          username: username,
+          password: password,
         }),
       });
       localStorage.setItem(storage.token, login.access_token);
@@ -1454,7 +1492,9 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
           <form onSubmit={submit} className="auth-form-fields">
             <label className="auth-field">
-              <span className="auth-field-label">Username</span>
+              <span className="auth-field-label">
+                {mode === "signup" ? "Username" : "Email or Username"}
+              </span>
               <input
                 required
                 value={form.username}
@@ -1462,21 +1502,27 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   setForm({ ...form, username: event.target.value })
                 }
                 autoComplete="username"
-                placeholder="Enter your username"
+                placeholder={mode === "signup" ? "Choose a username" : "you@gmail.com or username"}
               />
             </label>
             {mode === "signup" && (
               <label className="auth-field">
-                <span className="auth-field-label">Email</span>
+                <span className="auth-field-label">Gmail Address</span>
                 <input
                   type="email"
+                  required
                   value={form.email}
                   onChange={(event) =>
                     setForm({ ...form, email: event.target.value })
                   }
                   autoComplete="email"
-                  placeholder="name@example.com"
+                  placeholder="name@gmail.com"
+                  pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
+                  title="Must be a valid @gmail.com address"
                 />
+                <span style={{ fontSize: "12px", color: "var(--color-text-muted, #8b949e)", marginTop: "2px" }}>
+                  Strictly @gmail.com accounts only
+                </span>
               </label>
             )}
             <label className="auth-field">

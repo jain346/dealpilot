@@ -28,8 +28,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
-    user = get_user(username)
+def authenticate_user(identifier: str, password: str) -> Optional[UserInDB]:
+    identifier = identifier.strip()
+    user = get_user(identifier)
+    if not user:
+        # If not found by username, check by email
+        user = get_user_by_email(identifier.lower())
     if not user:
         return None
     if not verify_password(password, user.hashed_password):
@@ -38,6 +42,7 @@ def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
 
 
 def authenticate_or_create_google_user(email: str, name: Optional[str] = None) -> UserInDB:
+    email = email.strip().lower()
     existing_user = get_user_by_email(email)
     if existing_user:
         if name:

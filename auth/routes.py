@@ -13,20 +13,61 @@ router = APIRouter()
 
 @router.post("/signup", response_model=User)
 async def signup(payload: UserCreate):
-    if services.get_user(payload.username):
-        logger.warning("signup_rejected_user_exists", extra={"user_id": payload.username})
-        raise HTTPException(status_code=400, detail="User already exists")
-    user = services.create_user(payload.username, payload.password, payload.email)
+    username = payload.username.strip()
+    email = payload.email.strip().lower()
+
+    if not email.endswith("@gmail.com"):
+        logger.warning("signup_rejected_invalid_domain", extra={"email": email})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only @gmail.com email addresses are allowed.",
+        )
+
+    if services.get_user(username):
+        logger.warning("signup_rejected_username_exists", extra={"user_id": username})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username is already taken. Please choose a different username.",
+        )
+
+    if services.get_user_by_email(email):
+        logger.warning("signup_rejected_email_exists", extra={"email": email})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this @gmail.com address already exists. Please log in instead.",
+        )
+
+    try:
+        user = services.create_user(username, payload.password, email)
+    except Exception as e:
+        logger.warning("signup_create_user_error", extra={"error": str(e)})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this username or email already exists.",
+        )
+
     logger.info("user_signed_up", extra={"user_id": user.username})
     return User(username=user.username, email=user.email)
 
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = services.authenticate_user(form_data.username, form_data.password)
+    identifier = form_data.username.strip()
+
+    # If the user enters an email address, verify it strictly ends with @gmail.com
+    if "@" in identifier and not identifier.lower().endswith("@gmail.com"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only @gmail.com email addresses are allowed.",
+        )
+
+    user = services.authenticate_user(identifier, form_data.password)
     if not user:
-        logger.warning("login_failed", extra={"user_id": form_data.username})
-        raise HTTPException(status_code=401, detail="Incorrect username or password")
+        logger.warning("login_failed", extra={"user_id": identifier})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username/email or password",
+        )
     access_token_expires = timedelta(minutes=60)
     access_token = utils.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
