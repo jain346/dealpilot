@@ -76,8 +76,37 @@
     function AuthView({ onLogin }) {
       const [mode, setMode] = useState('login'); const [form, setForm] = useState({username:'',email:'',password:''}); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
       const update = event => setForm({...form, [event.target.name]:event.target.value});
-      const submit = async event => { event.preventDefault(); setBusy(true); setError(''); try { if (mode === 'signup') await api('/auth/signup',{method:'POST',body:JSON.stringify({username:form.username.trim(),email:form.email.trim() || null,password:form.password})}); const login = await api('/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:form.username.trim(),password:form.password})}); localStorage.setItem(store.token,login.access_token); const user = await api('/auth/me',{headers:{Authorization:`Bearer ${login.access_token}`}}); localStorage.setItem(store.user,JSON.stringify(user)); onLogin(user); } catch (err) { setError(err.message); } finally { setBusy(false); } };
-      return <section className="auth"><aside className="hero"><div className="logo">Deal<em>Pilot</em></div><div className="hero-copy"><p className="eyebrow">Creator partnership intelligence</p><h1>Find the next right deal.</h1><p>Research brands, surface timely opportunities, and make confident partnership decisions with an agent built for creators.</p></div><small>Private, account-based agent workspace</small></aside><main className="auth-panel"><div className="tabs"><button className={mode === 'login' ? 'tab active':'tab'} onClick={() => setMode('login')}>Log in</button><button className={mode === 'signup' ? 'tab active':'tab'} onClick={() => setMode('signup')}>Create account</button></div><h2>{mode === 'signup' ? 'Create your workspace':'Welcome back'}</h2><p className="subtle">{mode === 'signup' ? 'Start researching your next brand partnership.':'Log in to your DealPilot workspace.'}</p><form onSubmit={submit}><label>Username<input name="username" value={form.username} onChange={update} autoComplete="username" required /></label>{mode === 'signup' && <label>Email<input name="email" type="email" value={form.email} onChange={update} autoComplete="email" /></label>}<label>Password<input name="password" type="password" value={form.password} onChange={update} autoComplete={mode === 'signup' ? 'new-password':'current-password'} minLength="8" required /></label><button className="primary" disabled={busy}>{busy ? 'Working…' : mode === 'signup' ? 'Create account':'Log in'}</button><p className="form-message" role="alert">{error}</p></form></main></section>;
+      const submit = async event => {
+        event.preventDefault();
+        setBusy(true);
+        setError('');
+        const username = form.username.trim();
+        const email = form.email.trim().toLowerCase();
+        const password = form.password;
+        const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+
+        if (mode === 'signup') {
+          if (!username || username.length < 3) { setError('Username must be at least 3 characters.'); setBusy(false); return; }
+          if (!email || !gmailRegex.test(email)) { setError('Only @gmail.com email addresses are allowed (e.g. user@gmail.com).'); setBusy(false); return; }
+          if (password.length < 8) { setError('Password must be at least 8 characters.'); setBusy(false); return; }
+        } else {
+          if (username.includes('@') && !gmailRegex.test(username)) { setError('Only @gmail.com email addresses are allowed.'); setBusy(false); return; }
+        }
+
+        try {
+          if (mode === 'signup') await api('/auth/signup',{method:'POST',body:JSON.stringify({username:username,email:email,password:password})});
+          const login = await api('/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:username,password:password})});
+          localStorage.setItem(store.token,login.access_token);
+          const user = await api('/auth/me',{headers:{Authorization:`Bearer ${login.access_token}`}});
+          localStorage.setItem(store.user,JSON.stringify(user));
+          onLogin(user);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setBusy(false);
+        }
+      };
+      return <section className="auth"><aside className="hero"><div className="logo">Deal<em>Pilot</em></div><div className="hero-copy"><p className="eyebrow">Creator partnership intelligence</p><h1>Find the next right deal.</h1><p>Research brands, surface timely opportunities, and make confident partnership decisions with an agent built for creators.</p></div><small>Private, account-based agent workspace</small></aside><main className="auth-panel"><div className="tabs"><button className={mode === 'login' ? 'tab active':'tab'} onClick={() => { setMode('login'); setError(''); }}>Log in</button><button className={mode === 'signup' ? 'tab active':'tab'} onClick={() => { setMode('signup'); setError(''); }}>Create account</button></div><h2>{mode === 'signup' ? 'Create your workspace':'Welcome back'}</h2><p className="subtle">{mode === 'signup' ? 'Start researching your next brand partnership.':'Log in to your DealPilot workspace.'}</p><form onSubmit={submit}><label>{mode === 'signup' ? 'Username' : 'Email or Username'}<input name="username" value={form.username} onChange={update} autoComplete="username" placeholder={mode === 'signup' ? 'Choose a username' : 'you@gmail.com or username'} required /></label>{mode === 'signup' && <label>Gmail Address<input name="email" type="email" value={form.email} onChange={update} autoComplete="email" placeholder="you@gmail.com" pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$" title="Must be a valid @gmail.com address" required /></label>}<label>Password<input name="password" type="password" value={form.password} onChange={update} autoComplete={mode === 'signup' ? 'new-password':'current-password'} minLength="8" required /></label><button className="primary" disabled={busy}>{busy ? 'Working…' : mode === 'signup' ? 'Create account':'Log in'}</button><p className="form-message" role="alert">{error}</p></form></main></section>;
     }
 
     function ProfilePanel({ profile, setProfile }) {

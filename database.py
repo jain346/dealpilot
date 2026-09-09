@@ -289,8 +289,8 @@ def now() -> str:
 def get_user(username: str) -> Optional[dict[str, Optional[str]]]:
     with connection() as db:
         row = db.execute(
-            "SELECT username, email, hashed_password FROM users WHERE username = ?",
-            (username,),
+            "SELECT username, email, hashed_password FROM users WHERE LOWER(username) = LOWER(?)",
+            (username.strip(),),
         ).fetchone()
     return dict(row) if row else None
 
@@ -298,8 +298,8 @@ def get_user(username: str) -> Optional[dict[str, Optional[str]]]:
 def get_user_by_email(email: str) -> Optional[dict[str, Optional[str]]]:
     with connection() as db:
         row = db.execute(
-            "SELECT username, email, hashed_password FROM users WHERE email = ?",
-            (email,),
+            "SELECT username, email, hashed_password FROM users WHERE LOWER(email) = LOWER(?)",
+            (email.strip(),),
         ).fetchone()
     return dict(row) if row else None
 
@@ -308,16 +308,19 @@ def get_user_by_email(email: str) -> Optional[dict[str, Optional[str]]]:
 def create_user(
     username: str, email: Optional[str], hashed_password: str
 ) -> dict[str, Optional[str]]:
+    normalized_username = username.strip()
+    normalized_email = email.strip().lower() if email else None
     with connection() as db:
         db.execute(
             "INSERT INTO users (username, email, hashed_password, created_at) VALUES (?, ?, ?, ?)",
-            (username, email, hashed_password, now()),
+            (normalized_username, normalized_email, hashed_password, now()),
         )
     return {
-        "username": username,
-        "email": email,
+        "username": normalized_username,
+        "email": normalized_email,
         "hashed_password": hashed_password,
     }
+
 
 
 def create_conversation(session_id: str, username: str) -> None:
