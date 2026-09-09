@@ -1,9 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
-:root { font-family: 'DM Sans', sans-serif; color: #172033; background: #f4f7fa; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+:root { 
+  font-family: 'DM Sans', sans-serif; 
+  color: #e2e8f0; 
+  background: #080d16; 
+  font-synthesis: none; 
+  text-rendering: optimizeLegibility; 
+  -webkit-font-smoothing: antialiased; 
+}
+[data-theme="light"] { 
+  color: #172033; 
+  background: #f4f7fa; 
+}
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; }
+html, body { 
+  margin: 0; 
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 320px; 
+  min-height: 100vh; 
+  min-height: 100dvh;
+  background: #080d16;
+  overflow-x: hidden;
+}
+[data-theme="light"] body {
+  background: #f4f7fa;
+}
 button, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
-#root { min-height: 100vh; }
+#root { 
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 100vh; 
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #080d16;
+  overflow-x: hidden;
+}
+[data-theme="light"] #root {
+  background: #f4f7fa;
+}

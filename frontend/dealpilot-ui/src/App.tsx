@@ -1071,7 +1071,13 @@ function AssistantMessage({
   );
 }
 
-function TypingIndicator({ statusLabel }: { statusLabel?: string }) {
+function TypingIndicator({
+  statusLabel,
+  isFinished = false,
+}: {
+  statusLabel?: string;
+  isFinished?: boolean;
+}) {
   const [stepIndex, setStepIndex] = useState(0);
   const steps = [
     statusLabel || "Researching brand and gathering data...",
@@ -1082,11 +1088,18 @@ function TypingIndicator({ statusLabel }: { statusLabel?: string }) {
   ];
 
   useEffect(() => {
+    if (isFinished) {
+      setStepIndex(5);
+      return;
+    }
     const timer = setInterval(() => {
-      setStepIndex((i) => (i + 1) % steps.length);
-    }, 2000);
+      setStepIndex((i) => {
+        if (i < 3) return i + 1;
+        return 3;
+      });
+    }, 2200);
     return () => clearInterval(timer);
-  }, []);
+  }, [isFinished]);
 
   return (
     <div className="typing-indicator-wrapper">
@@ -1099,28 +1112,28 @@ function TypingIndicator({ statusLabel }: { statusLabel?: string }) {
           <summary className="thinking-summary">
             <span className="thinking-icon">🧠</span>
             <span className="thinking-title">
-              {statusLabel ? statusLabel : "Thinking process…"}
+              {isFinished ? "Analysis complete ✓" : (statusLabel ? statusLabel : "Thinking process…")}
             </span>
-            <span className="live-pulse-dot" />
+            <span className={isFinished ? "done-dot" : "live-pulse-dot"} />
           </summary>
           <div className="thinking-steps">
-            {steps.map((s, idx) => (
-              <div
-                key={s}
-                className={`thinking-step ${
-                  idx < stepIndex
-                    ? "done"
-                    : idx === stepIndex
-                    ? "active"
-                    : "pending"
-                }`}
-              >
-                <span className="step-status-icon">
-                  {idx < stepIndex ? "✓" : idx === stepIndex ? "⚡" : "○"}
-                </span>
-                <span>{s}</span>
-              </div>
-            ))}
+            {steps.map((s, idx) => {
+              const isDone = isFinished || idx < stepIndex;
+              const isActive = !isFinished && idx === stepIndex;
+              return (
+                <div
+                  key={s}
+                  className={`thinking-step ${
+                    isDone ? "done" : isActive ? "active" : "pending"
+                  }`}
+                >
+                  <span className="step-status-icon">
+                    {isDone ? "✓" : isActive ? "⚡" : "○"}
+                  </span>
+                  <span>{s}</span>
+                </div>
+              );
+            })}
           </div>
         </details>
       </div>
@@ -1307,10 +1320,12 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
         const container = document.getElementById("google-signin-btn-container");
         if (container) {
           try {
+            const containerWidth = container.offsetWidth || (typeof window !== "undefined" ? window.innerWidth - 64 : 320);
+            const btnWidth = Math.max(200, Math.min(Math.floor(containerWidth), 380));
             (window as any).google.accounts.id.renderButton(container, {
               theme: "outline",
               size: "large",
-              width: 380,
+              width: btnWidth,
               text: "continue_with",
               shape: "rectangular",
             });
@@ -1597,9 +1612,10 @@ function ProfileForm({
       });
       const updated = profileForForm(saved);
       onChange(updated);
+      localStorage.setItem("dealpilot:profile_completed", "true");
       toast.success("Profile saved successfully.");
-      if (isProfileComplete(updated) && onNavigate) {
-        toast.info("Profile complete! Ready to converse with DealPilot Agent.");
+      if (onNavigate) {
+        onNavigate("conversations");
       }
     } catch (err) {
       toastForError(toast, err, "Unable to save profile");
@@ -3479,12 +3495,25 @@ function ChatPage({
   const [input, setInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [busy, setBusy] = useState(false);
+  const [isFinishedThinking, setIsFinishedThinking] = useState(false);
   // busyRef mirrors busy state to avoid stale closures in useEffect
   const busyRef = useRef(false);
+  const pollingRef = useRef<number | null>(null);
   const [mobileRecentsOpen, setMobileRecentsOpen] = useState(false);
   const [statusLabel, setStatusLabel] = useState("");
   const historyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, []);
 
   const setIsBusy = (val: boolean) => {
     busyRef.current = val;
@@ -3598,6 +3627,8 @@ function ChatPage({
         }
 
         if (assistantContent) {
+          setIsFinishedThinking(true);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
           setMessages((current) => [
             ...current,
             { role: "assistant", content: assistantContent, created_at: new Date().toISOString() },
@@ -3616,6 +3647,7 @@ function ChatPage({
       } catch (err) {
         toastForError(toast, err, `${action.type === "research" ? "Research" : "Fit evaluation"} failed`);
       } finally {
+        setIsFinishedThinking(false);
         setIsBusy(false);
         setStatusLabel("");
       }
@@ -3624,7 +3656,42 @@ function ChatPage({
     void executePendingAction();
   }, [pendingAction]);
 
+  const startPollingForReply = (sessionId: string) => {
+    stopPolling();
+    let attempts = 0;
+    pollingRef.current = window.setInterval(async () => {
+      attempts++;
+      if (attempts > 80) {
+        stopPolling();
+        setIsBusy(false);
+        return;
+      }
+      try {
+        const latestMsgs = await request<Message[]>(
+          `/agent/sessions/${encodeURIComponent(sessionId)}/messages`,
+          { headers: authHeaders() },
+        );
+        if (
+          latestMsgs.length > 0 &&
+          latestMsgs[latestMsgs.length - 1].role === "assistant"
+        ) {
+          stopPolling();
+          setIsFinishedThinking(true);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          setMessages(latestMsgs);
+          setIsFinishedThinking(false);
+          setIsBusy(false);
+          setStatusLabel("");
+          onRefresh();
+        }
+      } catch {
+        // Polling retry on next tick
+      }
+    }, 2500);
+  };
+
   const loadMessages = async (id: string | null) => {
+    stopPolling();
     if (!id) {
       setMessages([]);
       return;
@@ -3641,6 +3708,13 @@ function ChatPage({
           ...prev,
           [id]: firstUserMsg.content,
         }));
+      }
+
+      // If user reloads while a message response is pending, resume live thinking & poll for reply
+      if (msgs.length > 0 && msgs[msgs.length - 1].role === "user") {
+        setIsBusy(true);
+        setStatusLabel("");
+        startPollingForReply(id);
       }
     } catch {
       localStorage.removeItem(storage.session);
@@ -3751,6 +3825,10 @@ function ChatPage({
           body: JSON.stringify({ message }),
         },
       );
+      // Show step 5 completed in thinking process for 1 second before revealing response!
+      setIsFinishedThinking(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       setMessages((current) => [
         ...current,
         {
@@ -3779,6 +3857,7 @@ function ChatPage({
       ]);
       toastForError(toast, err, "Message failed");
     } finally {
+      setIsFinishedThinking(false);
       setIsBusy(false);
     }
   };
@@ -3999,13 +4078,13 @@ function ChatPage({
                   </article>
                 );
               })}
-              {busy && <TypingIndicator statusLabel={statusLabel} />}
+              {busy && <TypingIndicator statusLabel={statusLabel} isFinished={isFinishedThinking} />}
             </>
           )}
           {/* Show typing indicator even when no messages yet (pending action started) */}
           {busy && messages.length === 0 && (
             <div style={{ padding: "0 24px" }}>
-              <TypingIndicator statusLabel={statusLabel} />
+              <TypingIndicator statusLabel={statusLabel} isFinished={isFinishedThinking} />
             </div>
           )}
         </div>
@@ -4215,13 +4294,32 @@ function AppShell({
   onLogout: () => void;
 }) {
   const toast = useToast();
-  // When an existing user arrives on the website, they see the new conversation page
-  const [page, setPageState] = useState<Page>("conversations");
+  // New user onboarding: land on profile setup first if profile is incomplete
+  const [page, setPageState] = useState<Page>(() => {
+    if (!isProfileComplete(profile)) {
+      return "profile";
+    }
+    const saved = localStorage.getItem(storage.page) as Page | null;
+    if (saved && ["overview", "opportunities", "research", "fit", "conversations", "profile", "settings"].includes(saved)) {
+      return saved;
+    }
+    return "conversations";
+  });
 
   const setPage = (newPage: Page) => {
     localStorage.setItem(storage.page, newPage);
     setPageState(newPage);
   };
+
+  // Direct new users to profile page upon initial load
+  useEffect(() => {
+    if (!isProfileComplete(profile)) {
+      const hasCompleted = localStorage.getItem("dealpilot:profile_completed");
+      if (!hasCompleted) {
+        setPageState("profile");
+      }
+    }
+  }, [profile]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [targetResearchCompany, setTargetResearchCompany] = useState<string | null>(null);
@@ -4326,8 +4424,6 @@ function AppShell({
     );
   if (page === "settings") content = <SettingsPage user={user} />;
 
-  const isTailored = isProfileComplete(profile);
-
   return (
     <div className="product-shell">
       <Sidebar
@@ -4351,9 +4447,6 @@ function AppShell({
             <div className="topbar-title">
               <span className="status-dot" />
               <span className="topbar-brand-label">DealPilot workspace</span>
-              {isTailored && (
-                <span className="status-badge-tailored">AI Tailored ✓</span>
-              )}
             </div>
           </div>
           <div className="topbar-actions">
