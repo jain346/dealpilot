@@ -1,5 +1,3 @@
-from google.adk.agents.llm_agent import Agent
-
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
@@ -8,12 +6,12 @@ from pydantic import BaseModel, Field
 class CreatorProfile(BaseModel):
     niche: str
     platform: str
-    audience_description: str
     audience_region: str
-
-    audience_size: int | None = None
+    audience_size: int = Field(description="Creator's audience/follower count.")
+    audience_description: str | None = None
     average_views: int | None = None
     engagement_rate: float | None = None
+
 
 
 class BrandResearchSummary(BaseModel):

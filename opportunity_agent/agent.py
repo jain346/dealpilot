@@ -31,10 +31,11 @@ class OpportunityInput(BaseModel):
         description="Description of the creator's audience.",
     )
 
-    audience_size: int | None = Field(
-        default=None,
-        description="Approximate audience/follower/subscriber count.",
+    audience_size: int = Field(
+        description="Approximate audience/follower/subscriber count of the creator (required).",
+        ge=1,
     )
+
 
     average_views: int | None = Field(
         default=None,
@@ -109,13 +110,14 @@ Those tasks belong to other DealPilot agents.
 ## Creator Context
 
 Use the provided creator profile to tailor discovery:
-- niche
-- platform
-- geography
-- audience
-- audience size
+- niche (required)
+- platform (required)
+- geography (required)
+- audience size (required)
+- audience description
 - average views
 - search goal
+
 
 ## Opportunity Signals
 

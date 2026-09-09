@@ -115,6 +115,34 @@ class DealPilotWorkflow:
             asyncio.Lock
         )
 
+    async def _sync_user_creator_profile(self, user_id: str) -> None:
+        """Sync canonical SQLite creator profile into ADK user state storage."""
+        from state.profile import load_or_create_creator_profile
+        from datetime import datetime, timezone
+
+        profile = load_or_create_creator_profile(user_id)
+        schema = self.session_service._get_schema_classes()
+        now = datetime.now(timezone.utc)
+        if self.session_service._uses_naive_datetime():
+            now = now.replace(tzinfo=None)
+
+        async with self.session_service._rollback_on_exception_session() as sql_session:
+            user_state_row = await sql_session.get(
+                schema.StorageUserState, (self.app_name, user_id)
+            )
+            if user_state_row:
+                user_state_row.state["creator_profile"] = profile.model_dump(mode="json")
+                user_state_row.update_time = now
+            else:
+                user_state_row = schema.StorageUserState(
+                    app_name=self.app_name,
+                    user_id=user_id,
+                    state={"creator_profile": profile.model_dump(mode="json")},
+                    update_time=now,
+                )
+                sql_session.add(user_state_row)
+            await sql_session.commit()
+
     async def create_session(self, user_id: str) -> str:
         """Create an unguessable session and persist its user ownership."""
         if get_user(user_id) is None:
@@ -122,6 +150,7 @@ class DealPilotWorkflow:
                 f"User '{user_id}' does not exist; create the account before creating a session."
             )
 
+        await self._sync_user_creator_profile(user_id)
         session_id = str(uuid4())
         await self.session_service.create_session(
             app_name=self.app_name, user_id=user_id, session_id=session_id
@@ -132,6 +161,7 @@ class DealPilotWorkflow:
             extra={"user_id": user_id, "session_id": session_id},
         )
         return session_id
+
 
     def user_owns_session(self, user_id: str, session_id: str) -> bool:
         """Return whether the persisted conversation belongs to this user."""
@@ -315,14 +345,17 @@ class DealPilotWorkflow:
             )
 
             # --------------------------------------------------
-            # ENSURE ADK SESSION EXISTS
+            # ENSURE ADK SESSION AND USER PROFILE STATE EXIST
             # --------------------------------------------------
+
+            await self._sync_user_creator_profile(user_id)
 
             session = await self.session_service.get_session(
                 app_name=self.app_name,
                 user_id=user_id,
                 session_id=session_id,
             )
+
 
             if session is None:
                 await self.session_service.create_session(

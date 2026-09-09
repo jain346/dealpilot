@@ -186,7 +186,17 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
         payload: CreatorProfileUpdate,
         current_user: UserInDB = Depends(get_current_user),
     ):
-        return update_creator_profile(current_user.username, payload)
+        try:
+            saved = update_creator_profile(current_user.username, payload)
+            await workflow._sync_user_creator_profile(current_user.username)
+            return saved
+        except ValueError as err:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(err),
+            )
+
+
 
     @router.post("/sessions/{session_id}/messages", response_model=AgentResponse)
     async def send_message(

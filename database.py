@@ -461,6 +461,16 @@ def upsert_creator_profile(
         ensure_ascii=False,
     )
 
+    raw_audience_size = profile.get("audience_size")
+    audience_size = None
+    if raw_audience_size is not None:
+        try:
+            parsed = int(raw_audience_size)
+            if parsed > 0:
+                audience_size = parsed
+        except (ValueError, TypeError):
+            audience_size = None
+
     with connection() as db:
         existing = db.execute(
             "SELECT user_id FROM creator_profiles WHERE user_id = ?",
@@ -491,7 +501,7 @@ def upsert_creator_profile(
                     profile.get("region"),
                     languages,
                     profile.get("audience_description"),
-                    profile.get("audience_size"),
+                    audience_size,
                     profile.get("average_views"),
                     profile.get("engagement_rate"),
                     timestamp,
@@ -525,13 +535,14 @@ def upsert_creator_profile(
                     profile.get("region"),
                     languages,
                     profile.get("audience_description"),
-                    profile.get("audience_size"),
+                    audience_size,
                     profile.get("average_views"),
                     profile.get("engagement_rate"),
                     timestamp,
                     timestamp,
                 ),
             )
+
 
     return get_creator_profile(username)
 

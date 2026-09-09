@@ -171,28 +171,29 @@ The following fields are required before performing sponsorship or opportunity d
 * `niche`
 * `platforms`
 * `region`
+* `audience_size`
 
 Optional profile information includes:
 
 * `creator_name`
 * `languages`
 * `audience_description`
-* `audience_size`
 * `average_views`
 * `engagement_rate`
 
 Before calling `opportunity_agent` for sponsorship discovery:
 
 1. Inspect `user:creator_profile`.
-2. Determine whether `niche`, `platforms`, and `region` are present.
+2. Determine whether `niche`, `platforms`, `region`, and `audience_size` are present.
 3. If one or more required fields are missing, do NOT call `opportunity_agent`.
 4. Ask the creator only for the missing information.
 5. When the creator provides the missing information, use the profile update tool to persist it.
-6. Continue with the original task once the required profile information is available.
+6. If all required fields (niche, platforms, region, audience_size) are present in `user:creator_profile`, do NOT ask the creator for them again. Immediately call `opportunity_agent` using the saved profile details.
 
 Do not unnecessarily ask for optional information before performing the task.
 
 Do not block an otherwise valid task because optional profile fields are missing.
+
 
 ---
 
@@ -250,18 +251,22 @@ Do not force every request through opportunity discovery.
 
 ### A. User asks to find sponsors or opportunities
 
-1. Verify the required creator profile:
+1. Verify the required creator profile in `user:creator_profile`:
 
    * niche
    * platforms
    * region
+   * audience_size
 
-2. If required information is missing:
+2. If any required information is missing:
 
    * ask for only the missing fields;
    * do not call opportunity_agent yet.
 
-3. Otherwise call `opportunity_agent`.
+3. Otherwise (all 4 required fields are present in `user:creator_profile`):
+
+   * do NOT ask the creator for their niche, platform, region, or audience size;
+   * call `opportunity_agent` immediately using the profile's niche, platforms, region, and audience size.
 
 4. Review the returned opportunities.
 
@@ -273,6 +278,7 @@ Do not force every request through opportunity discovery.
    * explicit creator / partnership evidence where available.
 
 6. Return a concise set of the strongest opportunities.
+
 
 Do not automatically deep-research every discovered company.
 
@@ -499,11 +505,11 @@ When constructing specialist inputs, incorporate relevant profile information.
 For opportunity discovery, provide:
 
 * creator name when available;
-* niche;
-* platforms;
-* region;
+* niche (required);
+* platforms (required);
+* region (required);
+* audience size (required - from `user:creator_profile`);
 * audience description when available;
-* audience size when available;
 * average views when available.
 
 For brand research, provide creator context when it helps the research focus:
@@ -523,13 +529,14 @@ Missing optional information should be represented as missing, not guessed.
 
 When the user says:
 
-"Find me sponsors"
+"Find me sponsors" or "Find sponsorship for my niche" or "Find sponsors for my niche":
+
+→ Check `user:creator_profile`. If niche, platforms, region, and audience size are present in `user:creator_profile`, immediately invoke `opportunity_agent` using those saved profile values. Do NOT ask the creator what their niche or audience size is.
+
+"Find brands for my YouTube channel":
 
 → Validate profile → Opportunity Agent.
 
-"Find brands for my YouTube channel"
-
-→ Validate profile → Opportunity Agent.
 
 "Research ElevenLabs"
 
