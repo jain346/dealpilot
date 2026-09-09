@@ -31,10 +31,11 @@ class OpportunityInput(BaseModel):
         description="Description of the creator's audience.",
     )
 
-    audience_size: int | None = Field(
-        default=None,
-        description="Approximate audience/follower/subscriber count.",
+    audience_size: int = Field(
+        description="Approximate audience/follower/subscriber count of the creator (required).",
+        ge=1,
     )
+
 
     average_views: int | None = Field(
         default=None,
@@ -109,13 +110,14 @@ Those tasks belong to other DealPilot agents.
 ## Creator Context
 
 Use the provided creator profile to tailor discovery:
-- niche
-- platform
-- geography
-- audience
-- audience size
+- niche (required)
+- platform (required)
+- geography (required)
+- audience size (required)
+- audience description
 - average views
 - search goal
+
 
 ## Opportunity Signals
 
@@ -187,9 +189,9 @@ Return a confidence score from 0.0 to 1.0.
 
 Use:
 
-0.85–1.00 = HIGH
-0.60–0.84 = MEDIUM
-below 0.60 = LOW
+0.90–1.00 = HIGH
+0.70–0.89 = MEDIUM
+below 0.70 = LOW
 
 Confidence measures evidence strength, recency, and specificity.
 It is NOT simply a measure of how well the brand matches the creator.
@@ -229,7 +231,7 @@ Do not add markdown or prose outside the structured output.
 
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model=os.environ.get("DEALPILOT_OPP_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.6-flash")),
     name='opportunity_agent',
     description=(
         "Discovers current sponsorship, partnership, affiliate, ambassador, "
@@ -240,5 +242,6 @@ root_agent = Agent(
     instruction=OPPORTUNITY_AGENT_INSTRUCTION,
     input_schema=OpportunityInput,
     output_schema=OpportunityOutput,
+    output_key="last_opportunity_output",
     tools=[get_parallel_mcp_tools()],
 )

@@ -1,3 +1,4 @@
+import os
 from google.adk.agents.llm_agent import Agent
 from pydantic import BaseModel, Field
 
@@ -36,6 +37,7 @@ class BrandResearchInput(BaseModel):
         default=None,
         description="Creator's target geographic market, if available.",
     )
+
 
 
 class Source(BaseModel):
@@ -218,7 +220,7 @@ Do not return a markdown report outside the schema.
 
 
 root_agent = Agent(
-    model='gemini-3.7-flash',
+    model=os.environ.get("DEALPILOT_BRAND_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.7-flash")),
     name='brand_research_agent',
     description=(
         "Deeply researches one specific company using current web "
@@ -229,5 +231,6 @@ root_agent = Agent(
     instruction=BRAND_RESEARCH_INSTRUCTION,
     input_schema=BrandResearchInput,
     output_schema=BrandResearchOutput,
+    output_key="last_brand_research_output",
     tools=[get_parallel_task_mcp_tools()],
 )

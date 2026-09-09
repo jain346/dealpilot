@@ -1,5 +1,4 @@
-from google.adk.agents.llm_agent import Agent
-
+import os
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
@@ -8,12 +7,12 @@ from pydantic import BaseModel, Field
 class CreatorProfile(BaseModel):
     niche: str
     platform: str
-    audience_description: str
     audience_region: str
-
-    audience_size: int | None = None
+    audience_size: int = Field(description="Creator's audience/follower count.")
+    audience_description: str | None = None
     average_views: int | None = None
     engagement_rate: float | None = None
+
 
 
 class BrandResearchSummary(BaseModel):
@@ -173,7 +172,7 @@ Return only the configured FitOutput.
 """
 
 root_agent = Agent(
-    model='gemini-3.6-flash',
+    model=os.environ.get("DEALPILOT_FIT_MODEL", os.environ.get("DEALPILOT_MODEL", "gemini-3.7-flash")),
     name='fit_agent',
     description=(
         "Evaluates whether a researched brand is a strong sponsorship "
@@ -182,6 +181,7 @@ root_agent = Agent(
     mode='single_turn',
     input_schema=FitInput,
     output_schema=FitOutput,
+    output_key="last_fit_output",
     instruction=FIT_AGENT_INSTRUCTION,
 )
 
