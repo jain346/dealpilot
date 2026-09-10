@@ -43,6 +43,25 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Database session table preparation warning: {e}")
 
+    try:
+        from gcs_persistence import start_gcs_sync_loop, GCS_BUCKET_NAME
+        from database import DATABASE_PATH
+        if GCS_BUCKET_NAME:
+            asyncio.create_task(start_gcs_sync_loop(DATABASE_PATH))
+    except Exception as e:
+        logger.warning(f"Could not initialize GCS background sync: {e}")
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    try:
+        from gcs_persistence import upload_db_to_gcs, GCS_BUCKET_NAME
+        from database import DATABASE_PATH
+        if GCS_BUCKET_NAME:
+            upload_db_to_gcs(DATABASE_PATH, force=True)
+    except Exception as e:
+        logger.warning(f"GCS shutdown upload warning: {e}")
+
 frontend_dist = Path(__file__).parent / "frontend" / "dealpilot-ui" / "dist"
 if (frontend_dist / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="frontend-assets")

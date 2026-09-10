@@ -39,6 +39,12 @@ def connection() -> Iterator[sqlite3.Connection]:
 
 
 def init_db() -> None:
+    try:
+        from gcs_persistence import download_db_from_gcs
+        download_db_from_gcs(DATABASE_PATH)
+    except Exception:
+        pass
+
     with connection() as db:
         db.executescript(
             """

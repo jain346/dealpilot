@@ -188,12 +188,34 @@ Open **`http://localhost:8000`** in your browser to start using DealPilot.
 
 ## ☁️ Google Cloud Deployment
 
-DealPilot is packaged as a multi-stage Docker container optimized for **Google Cloud Run**.
+DealPilot is packaged as a multi-stage Docker container optimized for **Google Cloud Run**. Because Cloud Run is a stateless container environment, DealPilot uses an automatic **Cloud Storage Persistence Bridge** (`gcs_persistence.py`) to keep SQLite data, users, and conversations 100% persistent across redeployments and restarts.
 
-### One-Command Deployment to Cloud Run
+### 1. Create a Cloud Storage Bucket for Persistence
 ```bash
 PROJECT_ID=$(gcloud config get-value project)
 
+# Create bucket in the US multi-region
+gcloud storage buckets create gs://${PROJECT_ID}-dealpilot-data --location=US
+```
+
+### 2. Grant IAM Roles
+Grant the Cloud Run service account access to Vertex AI and the persistence bucket:
+```bash
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectNumber)")
+
+# Grant Vertex AI user access
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/aiplatform.user"
+
+# Grant Cloud Storage Object Admin for persistent database sync
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+```
+
+### 3. Deploy to Cloud Run
+```bash
 gcloud run deploy dealpilot \
   --source . \
   --region us-central1 \
@@ -202,23 +224,20 @@ gcloud run deploy dealpilot \
   --memory 2Gi \
   --cpu 2 \
   --timeout 300 \
+  --min-instances 1 \
+  --max-instances 1 \
   --set-env-vars \
 GOOGLE_GENAI_USE_ENTERPRISE="TRUE",\
 GOOGLE_CLOUD_PROJECT="${PROJECT_ID}",\
 GOOGLE_CLOUD_LOCATION="us",\
 PARALLEL_API_KEY="your-parallel-api-key",\
-DEALPILOT_JWT_SECRET="$(openssl rand -hex 32)"
+DEALPILOT_GCS_BUCKET="${PROJECT_ID}-dealpilot-data",\
+DEALPILOT_JWT_SECRET="dealpilot-production-super-secret-key-2026"
 ```
-
-### Required GCP IAM Roles
-Ensure the Cloud Run service account has permissions to invoke Vertex AI models:
-```bash
-PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectNumber)")
-
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/aiplatform.user"
-```
+> [!NOTE]
+> - `DEALPILOT_GCS_BUCKET`: Enables automatic startup restore and continuous backup of `dealpilot.db`.
+> - `DEALPILOT_JWT_SECRET`: Uses a static persistent secret so existing user logins remain valid across redeploys.
+> - `--min-instances 1 --max-instances 1`: Keeps the service always warm and ensures single-instance SQLite consistency.
 
 ---
 
