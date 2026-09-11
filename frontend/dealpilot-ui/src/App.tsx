@@ -609,6 +609,70 @@ function Logo() {
   );
 }
 
+function LandingPage({ onLaunch }: { onLaunch: () => void }) {
+  const [activeSection, setActiveSection] = useState("home");
+  const landingNav = [
+    ["home", "Home"],
+    ["product", "Product"],
+    ["how-it-works", "How it works"],
+    ["for-creators", "For Creators"],
+    ["pricing", "Pricing"],
+    ["faq", "FAQ"],
+  ];
+  const steps = [
+    { number: "1", title: "Discover", text: "Find brands, campaigns, and commercial signals across the web." },
+    { number: "2", title: "Research", text: "See the company context, audience, and partnership history." },
+    { number: "3", title: "Fit", text: "Evaluate how well each opportunity matches your niche and goals." },
+    { number: "4", title: "Take action", text: "Get clear recommendations and save the deals worth pursuing." },
+  ];
+
+  useEffect(() => {
+    const sections = landingNav.map(([id]) => document.getElementById(id));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-18% 0px -62% 0px", threshold: [0.05, 0.25, 0.6] },
+    );
+    sections.forEach((section) => section && observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <main className="landing-page">
+      <header className="landing-header"><Logo /><nav className="landing-nav" aria-label="Landing page navigation">{landingNav.map(([id, label]) => <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""}>{label}</a>)}</nav><div className="landing-header-actions"><button className="landing-login" onClick={onLaunch}>Log in</button><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button></div></header>
+      <section className="landing-hero" id="home">
+        <div className="landing-copy"><span className="landing-kicker">Creator commercial intelligence</span><h1>Stop hunting for sponsors.<br /><strong>Start finding the right opportunities.</strong></h1><p>DealPilot uses AI agents to discover commercial signals, research brands, and tell you which partnerships actually fit your content, audience, and goals.</p><div className="landing-hero-actions"><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button><a className="landing-watch" href="#how-it-works"><span aria-hidden="true">▷</span> See how it works</a></div><div className="landing-proof-row"><span><b>✓</b> Find real opportunities</span><span><b>✓</b> Save hours of research</span><span><b>✓</b> Get a personalized fit score</span></div></div>
+        <div className="landing-preview" aria-label="DealPilot opportunities preview">
+          <div className="preview-glow" />
+          <div className="preview-window">
+            <div className="preview-sidebar"><Logo /><span>⌂ &nbsp; Home</span><span>◌ &nbsp; Chat</span><span className="preview-active">✦ &nbsp; Opportunities</span><span>◒ &nbsp; Research</span><span>◎ &nbsp; Fit analysis</span><span>◯ &nbsp; Profile</span></div>
+            <div className="preview-content">
+              <div className="preview-topline"><b>Opportunities</b><span>R&nbsp; Rahul</span></div>
+              <div className="preview-search">⌕ &nbsp; Find sponsors for your niche</div>
+              <div className="preview-filters"><span>All</span><span>Brands</span><span>Campaigns</span><span>Ambassador</span></div>
+              {[["Nike", "Sports & Fitness", "92/100"], ["Adobe", "Creative Tools", "88/100"], ["GoPro", "Travel & Adventure", "84/100"]].map(([brand, category, score]) => (
+                <div className="preview-opportunity" key={brand}><div className="preview-brand-mark">{brand === "Nike" ? "✓" : brand === "Adobe" ? "A" : "G"}</div><div><b>{brand}</b><small>{category}</small><em>Looking for creators with an engaged audience.</em></div><strong>{score}<small> Strong fit</small></strong></div>
+              ))}
+            </div>
+          </div>
+          <span className="preview-caption">Real opportunities.<br /><b>Powered by AI.</b></span>
+        </div>
+      </section>
+      <section className="landing-story landing-product" id="product"><div className="landing-story-copy"><span className="landing-kicker">More than a search tool</span><h2>AI agents that<br /><strong>work for creators.</strong></h2><p>DealPilot’s multi-agent system discovers opportunities, researches brands, and evaluates the best fit for your unique content, audience, and goals.</p><button className="landing-launch" onClick={onLaunch}>Explore the product <span aria-hidden="true">→</span></button></div><div className="agent-map"><div className="agent-map-director">✦ &nbsp; Director Agent</div><div className="agent-map-line" /><div className="agent-map-cards"><span>◉<b>Opportunity Agent</b><small>Brand discovery<br />Campaign search<br />Market signals</small></span><span>▤<b>Research Agent</b><small>Company research<br />Product analysis<br />Past partnerships</small></span><span>✧<b>Fit Agent</b><small>Audience fit<br />Brand alignment<br />Recommendation</small></span></div><strong>Structured insights → Real opportunities</strong></div></section>
+      <section className="landing-process" id="how-it-works"><div className="landing-section-heading"><h2>How <strong>DealPilot</strong> works</h2><p>From signal to sponsorship, powered by AI agents and parallel research.</p></div><div className="landing-steps">{steps.map((step) => <article className="landing-step" key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}</div></section>
+      <section className="landing-story landing-creators" id="for-creators"><div className="creator-stats"><span><b>10x</b><small>Faster research</small></span><span><b>100+</b><small>Brands discovered daily</small></span><span><b>90%</b><small>Time saved</small></span></div><div className="landing-story-copy"><span className="landing-kicker">Turn insights into income</span><h2>A smarter way to<br /><strong>grow as a creator.</strong></h2><p>Spend less time searching and more time creating. DealPilot helps you find the right brands, at the right time, with the right message.</p></div></section>
+      <section className="landing-pricing" id="pricing"><div className="landing-section-heading"><span className="landing-kicker">Simple by design</span><h2>Ready to find your next <strong>big opportunity?</strong></h2><p>Start exploring brand partnerships with DealPilot.</p></div><div className="pricing-card"><div><span className="pricing-label">Creator workspace</span><h3>Free to start</h3><p>Discover opportunities, research brands, and build your commercial profile.</p></div><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button></div></section>
+      <section className="landing-faq" id="faq"><div className="landing-section-heading"><span className="landing-kicker">Questions, answered</span><h2>Frequently asked <strong>questions.</strong></h2></div><div className="faq-list"><details><summary>What does DealPilot help creators find?</summary><p>DealPilot surfaces timely brand, campaign, and partnership opportunities matched to your niche and audience.</p></details><details><summary>How does the personalized fit score work?</summary><p>It evaluates your creator profile against audience, content, market, timing, and partnership signals.</p></details><details><summary>Can I update my creator profile later?</summary><p>Yes. Your saved profile remains available from the Profile tab and can be edited whenever your work evolves.</p></details></div></section>
+      <section className="landing-bottom-band"><h2>Built for today’s creators.<br /><strong>Ready for what’s next.</strong></h2><div><span>♧ <b>More opportunities</b><small>Discover brands you wouldn’t find on your own.</small></span><span>◷ <b>Less manual work</b><small>Focus on creating, not searching.</small></span><span>▥ <b>Smarter decisions</b><small>Spend time on the deals that fit.</small></span></div></section>
+      <footer className="landing-footer"><Logo /><span>Find the next right deal.</span><small>© 2026 DealPilot. Built for creators, by AI.</small></footer>
+    </main>
+  );
+}
+
 function Icon({ children }: { children: ReactNode }) {
   return (
     <span className="nav-icon" aria-hidden="true">
@@ -1624,172 +1688,56 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
    PROFILE
    ================================================================ */
 
-function ProfileForm({
-  profile,
-  onChange,
-  onNavigate,
-}: {
-  profile: Profile;
-  onChange: (profile: Profile) => void;
-  onNavigate?: (page: Page) => void;
-}) {
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const complete = [
-    profile.niche && profile.niche.trim() !== "",
-    profile.platforms && profile.platforms.length > 0,
-    profile.region && profile.region.trim() !== "",
-    profile.audience_size !== null && profile.audience_size !== undefined && profile.audience_size > 0,
-  ].filter(Boolean).length;
+const profileWizardSteps = ["Your Content", "Audience", "Platforms", "Location", "All Set!"];
+const profileNiches = ["Film & Cinema", "Gaming", "Technology", "Fashion & Beauty", "Food", "Travel", "Fitness & Wellness", "Education", "Finance", "Lifestyle", "Sports", "Music", "Comedy", "Business", "Photography", "Other"];
+const profilePlatforms = ["YouTube", "Instagram", "TikTok", "Facebook", "X", "Twitch", "LinkedIn", "Pinterest", "Snapchat"];
+const profileAudiences = ["General audience", "Gen Z", "Millennials", "Parents & families", "Business professionals", "Students", "Hobbyists & enthusiasts"];
+const profileLocations = ["United States", "Canada", "United Kingdom", "Australia", "India", "Germany", "France", "Brazil", "Mexico", "Singapore", "United Arab Emirates", "Other"];
 
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
+function ProfileForm({ profile, onChange, onNavigate }: { profile: Profile; onChange: (profile: Profile) => void; onNavigate?: (page: Page) => void }) {
+  const toast = useToast();
+  const [step, setStep] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1].split(", ").filter(Boolean) || [];
+  const [audienceTypes, setAudienceTypes] = useState(savedAudience);
+  const update = (changes: Partial<Profile>) => onChange({ ...profile, ...changes });
+  const requiredComplete = Boolean(profile.niche?.trim() && profile.platforms.length && profile.region?.trim() && profile.audience_size && profile.audience_size > 0);
+
+  const canContinue = () => {
+    if (step === 0) return Boolean(profile.niche);
+    if (step === 1) return Boolean(audienceTypes.length && profile.audience_size && profile.audience_size > 0);
+    if (step === 2) return profile.platforms.length > 0;
+    if (step === 3) return Boolean(profile.region);
+    return true;
+  };
+
+  const save = async () => {
     setBusy(true);
     try {
-      const saved = await request<Profile>("/agent/profile", {
-        method: "PATCH",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          ...profile,
-          creator_name: profile.creator_name || null,
-          niche: profile.niche || null,
-          region: profile.region || null,
-        }),
-      });
-      const updated = profileForForm(saved);
-      onChange(updated);
+      const description = audienceTypes.length ? `Audience: ${audienceTypes.join(", ")}` : null;
+      const saved = await request<Profile>("/agent/profile", { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ ...profile, creator_name: profile.creator_name || null, niche: profile.niche || null, region: profile.region || null, audience_description: description || null }) });
+      onChange(profileForForm(saved));
       localStorage.setItem("dealpilot:profile_completed", "true");
-      toast.success("Profile saved successfully.");
-      if (onNavigate) {
-        onNavigate("conversations");
-      }
-    } catch (err) {
-      toastForError(toast, err, "Unable to save profile");
-    } finally {
-      setBusy(false);
-    }
+      toast.success("Creator profile saved successfully.");
+      onNavigate?.("conversations");
+    } catch (err) { toastForError(toast, err, "Unable to save profile"); } finally { setBusy(false); }
   };
 
   return (
-    <form onSubmit={save} className="profile-fields">
-      <div className="profile-completion">
-        <span>Profile completeness</span>
-        <strong className={complete === 4 ? "complete" : ""}>
-          {complete}/4 required
-        </strong>
-      </div>
-      <label>
-        Creator name
-        <input
-          value={profile.creator_name || ""}
-          onChange={(event) =>
-            onChange({ ...profile, creator_name: event.target.value })
-          }
-          placeholder="Optional"
-        />
-      </label>
-      <label>
-        Niche *
-        <input
-          value={profile.niche || ""}
-          onChange={(event) =>
-            onChange({ ...profile, niche: event.target.value })
-          }
-          placeholder="AI, fitness, finance..."
-          required
-        />
-      </label>
-      <label>
-        Platforms *
-        <input
-          value={profile.platforms.join(", ")}
-          onChange={(event) =>
-            onChange({
-              ...profile,
-              platforms: event.target.value
-                .split(",")
-                .map((item) => item.trim())
-                .filter(Boolean),
-            })
-          }
-          placeholder="YouTube, Instagram, TikTok"
-          required
-        />
-      </label>
-      <label>
-        Region / Location *
-        <input
-          value={profile.region || ""}
-          onChange={(event) =>
-            onChange({ ...profile, region: event.target.value })
-          }
-          placeholder="India, United States..."
-          required
-        />
-      </label>
-      <div className="field-row">
-        <label>
-          Audience size *
-          <input
-            type="number"
-            min="1"
-            value={profile.audience_size ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...profile,
-                audience_size:
-                  event.target.value === "" ? null : Number(event.target.value),
-              })
-            }
-            placeholder="e.g. 50000"
-            required
-          />
-        </label>
-        <label>
-          Average views
-          <input
-            type="number"
-            min="0"
-            value={profile.average_views ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...profile,
-                average_views:
-                  event.target.value === "" ? null : Number(event.target.value),
-              })
-            }
-          />
-        </label>
-      </div>
-      <div className="field-row">
-        <label>
-          Engagement rate (%)
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={profile.engagement_rate ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...profile,
-                engagement_rate:
-                  event.target.value === "" ? null : Number(event.target.value),
-              })
-            }
-            placeholder="e.g. 4.2"
-          />
-        </label>
-        <div className="profile-form-hint-box">
-          <span className="hint-title">Signal Optimization</span>
-          <p>Audience & engagement numbers calibrate deal pricing and sponsor tier suggestions.</p>
-        </div>
-      </div>
-      <div className="profile-form-actions">
-        <button className="button primary profile-save-btn" disabled={busy}>
-          {busy ? "Saving…" : "Save changes"}
-        </button>
-      </div>
-    </form>
+    <div className="profile-wizard">
+      <div className="wizard-progress"><span>Step {step + 1} of {profileWizardSteps.length}</span><span>{Math.round(((step + 1) / profileWizardSteps.length) * 100)}% complete</span></div>
+      <div className="wizard-progress-bar"><i style={{ width: `${((step + 1) / profileWizardSteps.length) * 100}%` }} /></div>
+      <div className="wizard-stepper">{profileWizardSteps.map((label, index) => <button type="button" key={label} className={index === step ? "active" : index < step ? "done" : ""} onClick={() => index <= step && setStep(index)}><span>{index < step ? "✓" : index + 1}</span><b>{label}</b><small>{index === 0 ? "Let’s get to know you" : index === 1 ? "Your reach & community" : index === 2 ? "Where you create" : index === 3 ? "Your country" : "Start exploring"}</small></button>)}</div>
+      <form className="wizard-content" onSubmit={(event) => { event.preventDefault(); if (step < profileWizardSteps.length - 1) { if (canContinue()) setStep(step + 1); else toast.warning("Please complete this step before continuing."); } else void save(); }}>
+        {step === 0 && <><span className="wizard-required">• Required</span><h2>What’s your primary content niche?</h2><p>Select the option that best describes the type of content you create.</p><div className="wizard-options niche-options">{profileNiches.map((option) => <button type="button" key={option} className={profile.niche === option ? "selected" : ""} onClick={() => update({ niche: option })}><span className="wizard-option-icon">{["🎬", "🎮", "💻", "💄", "🍔", "✈️", "🏋️", "📚", "📊", "💗", "⚽", "🎵", "😊", "💼", "📷", "•••"][profileNiches.indexOf(option)]}</span><b>{option}</b><small>{option === "Technology" ? "Tech reviews, gadgets, AI, software" : option === "Gaming" ? "Gameplay, streaming, esports" : `Create ${option.toLowerCase()} content`}</small>{profile.niche === option && <em>✓</em>}</button>)}</div></>}
+        {step === 1 && <><h2>Who is your audience?</h2><p>Select all the audience groups you reach and tell us how large your community is.</p><div className="wizard-options compact-options">{profileAudiences.map((option) => <button type="button" key={option} className={audienceTypes.includes(option) ? "selected" : ""} onClick={() => setAudienceTypes(audienceTypes.includes(option) ? audienceTypes.filter((item) => item !== option) : [...audienceTypes, option])}><b>{option}</b>{audienceTypes.includes(option) && <em>✓</em>}</button>)}</div><label className="wizard-number-field">Audience size *<input type="number" min="1" value={profile.audience_size ?? ""} onChange={(event) => update({ audience_size: event.target.value ? Number(event.target.value) : null })} placeholder="Enter your audience size" /></label></>}
+        {step === 2 && <><h2>Which platforms do you create on?</h2><p>Select all platforms where you publish content.</p><div className="wizard-options compact-options platform-options">{profilePlatforms.map((option) => <button type="button" key={option} className={profile.platforms.includes(option) ? "selected" : ""} onClick={() => update({ platforms: profile.platforms.includes(option) ? profile.platforms.filter((item) => item !== option) : [...profile.platforms, option] })}><b>{option}</b>{profile.platforms.includes(option) && <em>✓</em>}</button>)}</div></>}
+        {step === 3 && <><h2>Where is your audience located?</h2><p>Choose the country that best represents your audience.</p><div className="wizard-options compact-options">{profileLocations.map((option) => <button type="button" key={option} className={profile.region === option ? "selected" : ""} onClick={() => update({ region: option })}><b>{option}</b>{profile.region === option && <em>✓</em>}</button>)}</div></>}
+        {step === 4 && <><h2>Your creator profile is ready.</h2><p>Review your selections. You can update these details later from your Profile tab.</p><div className="wizard-review">{[["Content niche", profile.niche], ["Audience", audienceTypes.join(", ")], ["Audience size", profile.audience_size?.toLocaleString()], ["Platforms", profile.platforms.join(", ")], ["Country", profile.region]].map(([label, value]) => <div key={label}><small>{label}</small><b>{value || "Not provided"}</b></div>)}</div></>}
+        <div className="wizard-actions">{step > 0 && <button type="button" className="button secondary" onClick={() => setStep(step - 1)}>← Back</button>}<button className="button primary profile-save-btn" disabled={busy}>{busy ? "Saving…" : step === profileWizardSteps.length - 1 ? "Save profile" : "Continue →"}</button></div>
+      </form>
+      {requiredComplete && <p className="wizard-edit-note">Your saved details are shown in your profile summary and can be edited here.</p>}
+    </div>
   );
 }
 
@@ -1803,6 +1751,8 @@ function ProfilePage({
   onNavigate?: (page: Page) => void;
 }) {
   const ready = isProfileComplete(profile);
+  const [editing, setEditing] = useState(!ready);
+  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1] || "Not provided";
 
   return (
     <PageFrame
@@ -1827,43 +1777,27 @@ function ProfilePage({
         </div>
       )}
       <div className="profile-layout">
-        <section className="panel profile-about">
-          <span className="profile-avatar large">
-            {(profile.creator_name || "A").slice(0, 1).toUpperCase()}
-          </span>
-          <h3>{profile.creator_name || "Your creator identity"}</h3>
-          <p>{profile.niche || "Add your niche to start tailoring signals."}</p>
-          <div className="tag-row">
-            {profile.platforms.map((platform) => (
-              <span className="tag" key={platform}>
-                {platform}
-              </span>
-            ))}
-          </div>
-          {profile.audience_size && (
-            <div style={{ marginTop: 12, fontSize: "12px", color: "var(--muted)" }}>
-              Audience size: <strong>{profile.audience_size.toLocaleString()}</strong>
+        {ready && !editing ? (
+          <section className="panel saved-profile-panel">
+            <div className="panel-heading">
+              <div><span className="kicker">Saved profile</span><h3>Your creator details</h3></div>
+              <button className="button secondary" onClick={() => setEditing(true)}>Edit profile</button>
             </div>
-          )}
-          {ready && onNavigate && (
-            <button
-              className="button primary"
-              style={{ marginTop: 16, width: "100%" }}
-              onClick={() => onNavigate("conversations")}
-            >
-              Converse with Agent →
-            </button>
-          )}
-        </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <span className="kicker">Persistent state</span>
-              <h3>Edit your profile</h3>
+            <div className="saved-profile-grid">
+              <div><small>Content niche</small><strong>{profile.niche}</strong></div>
+              <div><small>Audience</small><strong>{savedAudience}</strong></div>
+              <div><small>Audience size</small><strong>{profile.audience_size?.toLocaleString()}</strong></div>
+              <div><small>Platforms</small><strong>{profile.platforms.join(", ")}</strong></div>
+              <div><small>Country</small><strong>{profile.region}</strong></div>
             </div>
-          </div>
-          <ProfileForm profile={profile} onChange={onChange} onNavigate={onNavigate} />
-        </section>
+            {onNavigate && <button className="button primary" onClick={() => onNavigate("conversations")}>Converse with Agent →</button>}
+          </section>
+        ) : (
+          <section className="panel">
+            <div className="panel-heading"><div><span className="kicker">{ready ? "Edit profile" : "Profile setup"}</span><h3>{ready ? "Update your creator details" : "Create your creator profile"}</h3></div></div>
+            <ProfileForm profile={profile} onChange={onChange} onNavigate={onNavigate} />
+          </section>
+        )}
       </div>
     </PageFrame>
   );
@@ -4613,6 +4547,7 @@ export default function App() {
   }, [theme]);
 
   const [user, setUser] = useState<User | null>(null);
+    const [showAuth, setShowAuth] = useState(false);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [loading, setLoading] = useState(true);
 
@@ -4673,13 +4608,15 @@ export default function App() {
             setProfile={setProfile}
             onLogout={logout}
           />
-        ) : (
+        ) : showAuth ? (
           <AuthScreen
             onLogin={(current) => {
               setUser(current);
               void loadProfile();
             }}
           />
+        ) : (
+          <LandingPage onLaunch={() => setShowAuth(true)} />
         )}
       </ToastProvider>
     </ThemeContext.Provider>
