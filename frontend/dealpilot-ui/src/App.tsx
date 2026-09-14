@@ -1420,8 +1420,6 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
     const email = form.email.trim().toLowerCase();
     const password = form.password;
 
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
-
     if (mode === "signup") {
       if (!username || username.length < 3) {
         setError("Username must be at least 3 characters long.");
@@ -1429,24 +1427,12 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
         return;
       }
       if (!email) {
-        setError("Please enter your Gmail address.");
-        setBusy(false);
-        return;
-      }
-      if (!gmailRegex.test(email)) {
-        setError("Only @gmail.com email addresses are allowed (e.g. yourname@gmail.com).");
+        setError("Please enter your email address.");
         setBusy(false);
         return;
       }
       if (password.length < 8) {
         setError("Password must be at least 8 characters long.");
-        setBusy(false);
-        return;
-      }
-    } else {
-      // In login mode: if user types an email address, ensure it is @gmail.com
-      if (username.includes("@") && !gmailRegex.test(username)) {
-        setError("Only @gmail.com email addresses are allowed.");
         setBusy(false);
         return;
       }
@@ -1566,12 +1552,12 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   setForm({ ...form, username: event.target.value })
                 }
                 autoComplete="username"
-                placeholder={mode === "signup" ? "Choose a username" : "you@gmail.com or username"}
+                placeholder={mode === "signup" ? "Choose a username" : "you@example.com or username"}
               />
             </label>
             {mode === "signup" && (
               <label className="auth-field">
-                <span className="auth-field-label">Gmail Address</span>
+                <span className="auth-field-label">Email Address</span>
                 <input
                   type="email"
                   required
@@ -1580,12 +1566,10 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                     setForm({ ...form, email: event.target.value })
                   }
                   autoComplete="email"
-                  placeholder="name@gmail.com"
-                  pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
-                  title="Must be a valid @gmail.com address"
+                  placeholder="name@example.com"
                 />
                 <span style={{ fontSize: "12px", color: "var(--color-text-muted, #8b949e)", marginTop: "2px" }}>
-                  Strictly @gmail.com accounts only
+                  Use any valid email address
                 </span>
               </label>
             )}

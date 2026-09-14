@@ -16,13 +16,6 @@ async def signup(payload: UserCreate):
     username = payload.username.strip()
     email = payload.email.strip().lower()
 
-    if not email.endswith("@gmail.com"):
-        logger.warning("signup_rejected_invalid_domain", extra={"email": email})
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only @gmail.com email addresses are allowed.",
-        )
-
     if services.get_user(username):
         logger.warning("signup_rejected_username_exists", extra={"user_id": username})
         raise HTTPException(
@@ -34,7 +27,7 @@ async def signup(payload: UserCreate):
         logger.warning("signup_rejected_email_exists", extra={"email": email})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this @gmail.com address already exists. Please log in instead.",
+            detail="An account with this email address already exists. Please log in instead.",
         )
 
     try:
@@ -53,13 +46,6 @@ async def signup(payload: UserCreate):
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     identifier = form_data.username.strip()
-
-    # If the user enters an email address, verify it strictly ends with @gmail.com
-    if "@" in identifier and not identifier.lower().endswith("@gmail.com"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only @gmail.com email addresses are allowed.",
-        )
 
     user = services.authenticate_user(identifier, form_data.password)
     if not user:

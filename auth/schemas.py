@@ -1,11 +1,10 @@
-import re
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 
 
 class UserCreate(BaseModel):
     username: str
-    email: str
+    email: EmailStr
     password: str
 
     @field_validator("username")
@@ -20,13 +19,10 @@ class UserCreate(BaseModel):
 
     @field_validator("email")
     @classmethod
-    def validate_gmail(cls, v: str) -> str:
-        if not v:
+    def validate_email(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
             raise ValueError("Email address is required")
-        cleaned = v.strip().lower()
-        if not re.match(r"^[a-zA-Z0-9._%+-]+@gmail\.com$", cleaned):
-            raise ValueError("Only @gmail.com email addresses are allowed (e.g. user@gmail.com)")
-        return cleaned
+        return v.strip().lower()
 
     @field_validator("password")
     @classmethod
