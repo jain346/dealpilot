@@ -5685,7 +5685,9 @@ function AppShell({
             <div className="topbar-title">
               <span className="status-dot" />
               <span className="topbar-brand-label">
-                {onboarding ? "Set up your DealPilot profile" : "DealPilot workspace"}
+                {onboarding
+                  ? "Set up your DealPilot profile"
+                  : "DealPilot workspace"}
               </span>
             </div>
           </div>
