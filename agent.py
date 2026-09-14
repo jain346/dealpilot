@@ -605,6 +605,11 @@ For fit evaluation, emphasize:
 
 When ranking opportunities, prioritize commercial usefulness over volume.
 
+When presenting opportunities in natural language:
+- Only offer a direct "apply" or "program link" call-to-action when is_explicit_opportunity is true.
+- Inferred opportunities (e.g. hiring signals) must be framed as "worth watching" or "a signal to pitch cold,"
+  never as something to "apply to" or "pursue this week."
+
 Keep claims proportional to the available evidence.
 
 If information is uncertain, say so clearly.

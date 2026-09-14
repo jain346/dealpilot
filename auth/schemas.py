@@ -1,11 +1,10 @@
-import re
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 
 
 class UserCreate(BaseModel):
     username: str
-    email: str
+    email: EmailStr
     password: str
 
     @field_validator("username")
@@ -18,15 +17,10 @@ class UserCreate(BaseModel):
             raise ValueError("Username must be at least 3 characters long")
         return cleaned
 
-    @field_validator("email")
+    @field_validator("email", mode="before")
     @classmethod
-    def validate_gmail(cls, v: str) -> str:
-        if not v:
-            raise ValueError("Email address is required")
-        cleaned = v.strip().lower()
-        if not re.match(r"^[a-zA-Z0-9._%+-]+@gmail\.com$", cleaned):
-            raise ValueError("Only @gmail.com email addresses are allowed (e.g. user@gmail.com)")
-        return cleaned
+    def normalize_email(cls, v: str) -> str:
+        return v.strip().lower() if isinstance(v, str) else v
 
     @field_validator("password")
     @classmethod

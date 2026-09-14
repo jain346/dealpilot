@@ -182,7 +182,9 @@ function ThemeToggle() {
       onClick={toggleTheme}
       title={`Switch to ${theme === "dark" ? "Light" : "Dark"} mode`}
     >
-      <span className="theme-toggle-icon">{theme === "dark" ? "☀️" : "🌙"}</span>
+      <span className="theme-toggle-icon">
+        {theme === "dark" ? "☀️" : "🌙"}
+      </span>
       <span className="theme-toggle-text">
         {theme === "dark" ? "Light" : "Dark"}
       </span>
@@ -257,7 +259,9 @@ function ToastProvider({ children }: { children: ReactNode }) {
             role="alert"
             style={
               t.duration
-                ? ({ "--toast-duration": `${t.duration}ms` } as React.CSSProperties)
+                ? ({
+                    "--toast-duration": `${t.duration}ms`,
+                  } as React.CSSProperties)
                 : undefined
             }
           >
@@ -329,9 +333,7 @@ function toastForError(toast: ToastApi, error: unknown, fallback: string) {
       return;
     }
   }
-  toast.error(
-    error instanceof Error ? error.message : fallback,
-  );
+  toast.error(error instanceof Error ? error.message : fallback);
 }
 
 function authHeaders() {
@@ -355,14 +357,14 @@ function formatConfidence(c?: number | null): string {
 function isProfileComplete(p: Profile): boolean {
   return Boolean(
     p.niche &&
-      p.niche.trim() !== "" &&
-      p.region &&
-      p.region.trim() !== "" &&
-      p.platforms &&
-      p.platforms.length > 0 &&
-      p.audience_size !== null &&
-      p.audience_size !== undefined &&
-      p.audience_size > 0,
+    p.niche.trim() !== "" &&
+    p.region &&
+    p.region.trim() !== "" &&
+    p.platforms &&
+    p.platforms.length > 0 &&
+    p.audience_size !== null &&
+    p.audience_size !== undefined &&
+    p.audience_size > 0,
   );
 }
 
@@ -381,9 +383,9 @@ function profileForForm(profile: Profile): Profile {
  * The backend already does this at query time, but this guard handles
  * any stale data that may have arrived before the migration ran.
  */
-function dedupeByCompany<T extends { company_name: string; updated_at: string }>(
-  items: T[],
-): T[] {
+function dedupeByCompany<
+  T extends { company_name: string; updated_at: string },
+>(items: T[]): T[] {
   const seen = new Map<string, T>();
   for (const item of items) {
     const key = item.company_name.toLowerCase();
@@ -392,8 +394,8 @@ function dedupeByCompany<T extends { company_name: string; updated_at: string }>
       seen.set(key, item);
     }
   }
-  return Array.from(seen.values()).sort(
-    (a, b) => b.updated_at.localeCompare(a.updated_at),
+  return Array.from(seen.values()).sort((a, b) =>
+    b.updated_at.localeCompare(a.updated_at),
   );
 }
 
@@ -435,7 +437,10 @@ function inlineMarkdown(value: string) {
         const hashStr = url.slice(1);
         const slashIdx = hashStr.indexOf("/");
         const page = slashIdx !== -1 ? hashStr.slice(0, slashIdx) : hashStr;
-        const company = slashIdx !== -1 ? decodeURIComponent(hashStr.slice(slashIdx + 1)) : "";
+        const company =
+          slashIdx !== -1
+            ? decodeURIComponent(hashStr.slice(slashIdx + 1))
+            : "";
         links.push(
           `<a class="md-link nav-internal-link" data-page="${page}" data-company="${escapeHtml(company)}" href="${url}">${linkText} <span class="ext-icon">→</span></a>`,
         );
@@ -461,7 +466,10 @@ function inlineMarkdown(value: string) {
   text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
 
   // Restore Markdown links
-  text = text.replace(/___MD_LINK_(\d+)___/g, (_, idx) => links[parseInt(idx, 10)] || "");
+  text = text.replace(
+    /___MD_LINK_(\d+)___/g,
+    (_, idx) => links[parseInt(idx, 10)] || "",
+  );
 
   return text;
 }
@@ -506,11 +514,11 @@ function markdownHtml(markdown: string) {
     codeBlocks.push(
       `<div class="md-code-block">` +
         `<div class="md-code-header">` +
-          `<span class="md-code-lang">${escapeHtml(cleanLang)}</span>` +
-          `<button class="md-code-copy" onclick="navigator.clipboard.writeText(\`${rawCode.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`).then(() => { this.innerText='Copied!'; setTimeout(() => this.innerText='Copy', 2000); })">Copy</button>` +
+        `<span class="md-code-lang">${escapeHtml(cleanLang)}</span>` +
+        `<button class="md-code-copy" onclick="navigator.clipboard.writeText(\`${rawCode.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`).then(() => { this.innerText='Copied!'; setTimeout(() => this.innerText='Copy', 2000); })">Copy</button>` +
         `</div>` +
         `<pre><code>${escapedCode}</code></pre>` +
-      `</div>`,
+        `</div>`,
     );
     return `___CODE_BLOCK_${idx}___`;
   });
@@ -553,7 +561,10 @@ function markdownHtml(markdown: string) {
         const trimmed = block.trim();
 
         if (trimmed.startsWith("___CODE_BLOCK_") && trimmed.endsWith("___")) {
-          const idx = parseInt(trimmed.replace("___CODE_BLOCK_", "").replace("___", ""), 10);
+          const idx = parseInt(
+            trimmed.replace("___CODE_BLOCK_", "").replace("___", ""),
+            10,
+          );
           return codeBlocks[idx] || "";
         }
 
@@ -562,16 +573,20 @@ function markdownHtml(markdown: string) {
         }
 
         const h1Match = trimmed.match(/^#\s+(.+)$/m);
-        if (h1Match) return `<h1 class="md-h1">${inlineMarkdown(h1Match[1])}</h1>`;
+        if (h1Match)
+          return `<h1 class="md-h1">${inlineMarkdown(h1Match[1])}</h1>`;
 
         const h2Match = trimmed.match(/^##\s+(.+)$/m);
-        if (h2Match) return `<h2 class="md-h2">${inlineMarkdown(h2Match[1])}</h2>`;
+        if (h2Match)
+          return `<h2 class="md-h2">${inlineMarkdown(h2Match[1])}</h2>`;
 
         const h3Match = trimmed.match(/^###\s+(.+)$/m);
-        if (h3Match) return `<h3 class="md-h3">${inlineMarkdown(h3Match[1])}</h3>`;
+        if (h3Match)
+          return `<h3 class="md-h3">${inlineMarkdown(h3Match[1])}</h3>`;
 
         const h4Match = trimmed.match(/^####\s+(.+)$/m);
-        if (h4Match) return `<h4 class="md-h4">${inlineMarkdown(h4Match[1])}</h4>`;
+        if (h4Match)
+          return `<h4 class="md-h4">${inlineMarkdown(h4Match[1])}</h4>`;
 
         if (/^---+$/.test(trimmed)) return `<hr class="md-hr" />`;
 
@@ -620,10 +635,26 @@ function LandingPage({ onLaunch }: { onLaunch: () => void }) {
     ["faq", "FAQ"],
   ];
   const steps = [
-    { number: "1", title: "Discover", text: "Find brands, campaigns, and commercial signals across the web." },
-    { number: "2", title: "Research", text: "See the company context, audience, and partnership history." },
-    { number: "3", title: "Fit", text: "Evaluate how well each opportunity matches your niche and goals." },
-    { number: "4", title: "Take action", text: "Get clear recommendations and save the deals worth pursuing." },
+    {
+      number: "1",
+      title: "Discover",
+      text: "Find brands, campaigns, and commercial signals across the web.",
+    },
+    {
+      number: "2",
+      title: "Research",
+      text: "See the company context, audience, and partnership history.",
+    },
+    {
+      number: "3",
+      title: "Fit",
+      text: "Evaluate how well each opportunity matches your niche and goals.",
+    },
+    {
+      number: "4",
+      title: "Take action",
+      text: "Get clear recommendations and save the deals worth pursuing.",
+    },
   ];
 
   useEffect(() => {
@@ -643,32 +674,304 @@ function LandingPage({ onLaunch }: { onLaunch: () => void }) {
 
   return (
     <main className="landing-page">
-      <header className="landing-header"><Logo /><nav className="landing-nav" aria-label="Landing page navigation">{landingNav.map(([id, label]) => <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""}>{label}</a>)}</nav><div className="landing-header-actions"><button className="landing-login" onClick={onLaunch}>Log in</button><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button></div></header>
+      <header className="landing-header">
+        <Logo />
+        <nav className="landing-nav" aria-label="Landing page navigation">
+          {landingNav.map(([id, label]) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={activeSection === id ? "active" : ""}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="landing-header-actions">
+          <button className="landing-login" onClick={onLaunch}>
+            Log in
+          </button>
+          <button className="landing-launch" onClick={onLaunch}>
+            Launch DealPilot <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </header>
       <section className="landing-hero" id="home">
-        <div className="landing-copy"><span className="landing-kicker">Creator commercial intelligence</span><h1>Stop hunting for sponsors.<br /><strong>Start finding the right opportunities.</strong></h1><p>DealPilot uses AI agents to discover commercial signals, research brands, and tell you which partnerships actually fit your content, audience, and goals.</p><div className="landing-hero-actions"><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button><a className="landing-watch" href="#how-it-works"><span aria-hidden="true">▷</span> See how it works</a></div><div className="landing-proof-row"><span><b>✓</b> Find real opportunities</span><span><b>✓</b> Save hours of research</span><span><b>✓</b> Get a personalized fit score</span></div></div>
-        <div className="landing-preview" aria-label="DealPilot opportunities preview">
+        <div className="landing-copy">
+          <span className="landing-kicker">
+            Creator commercial intelligence
+          </span>
+          <h1>
+            Stop hunting for sponsors.
+            <br />
+            <strong>Start finding the right opportunities.</strong>
+          </h1>
+          <p>
+            DealPilot uses AI agents to discover commercial signals, research
+            brands, and tell you which partnerships actually fit your content,
+            audience, and goals.
+          </p>
+          <div className="landing-hero-actions">
+            <button className="landing-launch" onClick={onLaunch}>
+              Launch DealPilot <span aria-hidden="true">→</span>
+            </button>
+            <a className="landing-watch" href="#how-it-works">
+              <span aria-hidden="true">▷</span> See how it works
+            </a>
+          </div>
+          <div className="landing-proof-row">
+            <span>
+              <b>✓</b> Find real opportunities
+            </span>
+            <span>
+              <b>✓</b> Save hours of research
+            </span>
+            <span>
+              <b>✓</b> Get a personalized fit score
+            </span>
+          </div>
+        </div>
+        <div
+          className="landing-preview"
+          aria-label="DealPilot opportunities preview"
+        >
           <div className="preview-glow" />
           <div className="preview-window">
-            <div className="preview-sidebar"><Logo /><span>⌂ &nbsp; Home</span><span>◌ &nbsp; Chat</span><span className="preview-active">✦ &nbsp; Opportunities</span><span>◒ &nbsp; Research</span><span>◎ &nbsp; Fit analysis</span><span>◯ &nbsp; Profile</span></div>
+            <div className="preview-sidebar">
+              <Logo />
+              <span>⌂ &nbsp; Home</span>
+              <span>◌ &nbsp; Chat</span>
+              <span className="preview-active">✦ &nbsp; Opportunities</span>
+              <span>◒ &nbsp; Research</span>
+              <span>◎ &nbsp; Fit analysis</span>
+              <span>◯ &nbsp; Profile</span>
+            </div>
             <div className="preview-content">
-              <div className="preview-topline"><b>Opportunities</b><span>R&nbsp; Rahul</span></div>
-              <div className="preview-search">⌕ &nbsp; Find sponsors for your niche</div>
-              <div className="preview-filters"><span>All</span><span>Brands</span><span>Campaigns</span><span>Ambassador</span></div>
-              {[["Nike", "Sports & Fitness", "92/100"], ["Adobe", "Creative Tools", "88/100"], ["GoPro", "Travel & Adventure", "84/100"]].map(([brand, category, score]) => (
-                <div className="preview-opportunity" key={brand}><div className="preview-brand-mark">{brand === "Nike" ? "✓" : brand === "Adobe" ? "A" : "G"}</div><div><b>{brand}</b><small>{category}</small><em>Looking for creators with an engaged audience.</em></div><strong>{score}<small> Strong fit</small></strong></div>
+              <div className="preview-topline">
+                <b>Opportunities</b>
+                <span>R&nbsp; Rahul</span>
+              </div>
+              <div className="preview-search">
+                ⌕ &nbsp; Find sponsors for your niche
+              </div>
+              <div className="preview-filters">
+                <span>All</span>
+                <span>Brands</span>
+                <span>Campaigns</span>
+                <span>Ambassador</span>
+              </div>
+              {[
+                ["Nike", "Sports & Fitness", "92/100"],
+                ["Adobe", "Creative Tools", "88/100"],
+                ["GoPro", "Travel & Adventure", "84/100"],
+              ].map(([brand, category, score]) => (
+                <div className="preview-opportunity" key={brand}>
+                  <div className="preview-brand-mark">
+                    {brand === "Nike" ? "✓" : brand === "Adobe" ? "A" : "G"}
+                  </div>
+                  <div>
+                    <b>{brand}</b>
+                    <small>{category}</small>
+                    <em>Looking for creators with an engaged audience.</em>
+                  </div>
+                  <strong>
+                    {score}
+                    <small> Strong fit</small>
+                  </strong>
+                </div>
               ))}
             </div>
           </div>
-          <span className="preview-caption">Real opportunities.<br /><b>Powered by AI.</b></span>
+          <span className="preview-caption">
+            Real opportunities.
+            <br />
+            <b>Powered by AI.</b>
+          </span>
         </div>
       </section>
-      <section className="landing-story landing-product" id="product"><div className="landing-story-copy"><span className="landing-kicker">More than a search tool</span><h2>AI agents that<br /><strong>work for creators.</strong></h2><p>DealPilot’s multi-agent system discovers opportunities, researches brands, and evaluates the best fit for your unique content, audience, and goals.</p><button className="landing-launch" onClick={onLaunch}>Explore the product <span aria-hidden="true">→</span></button></div><div className="agent-map"><div className="agent-map-director">✦ &nbsp; Director Agent</div><div className="agent-map-line" /><div className="agent-map-cards"><span>◉<b>Opportunity Agent</b><small>Brand discovery<br />Campaign search<br />Market signals</small></span><span>▤<b>Research Agent</b><small>Company research<br />Product analysis<br />Past partnerships</small></span><span>✧<b>Fit Agent</b><small>Audience fit<br />Brand alignment<br />Recommendation</small></span></div><strong>Structured insights → Real opportunities</strong></div></section>
-      <section className="landing-process" id="how-it-works"><div className="landing-section-heading"><h2>How <strong>DealPilot</strong> works</h2><p>From signal to sponsorship, powered by AI agents and parallel research.</p></div><div className="landing-steps">{steps.map((step) => <article className="landing-step" key={step.number}><span>{step.number}</span><h3>{step.title}</h3><p>{step.text}</p></article>)}</div></section>
-      <section className="landing-story landing-creators" id="for-creators"><div className="creator-stats"><span><b>10x</b><small>Faster research</small></span><span><b>100+</b><small>Brands discovered daily</small></span><span><b>90%</b><small>Time saved</small></span></div><div className="landing-story-copy"><span className="landing-kicker">Turn insights into income</span><h2>A smarter way to<br /><strong>grow as a creator.</strong></h2><p>Spend less time searching and more time creating. DealPilot helps you find the right brands, at the right time, with the right message.</p></div></section>
-      <section className="landing-pricing" id="pricing"><div className="landing-section-heading"><span className="landing-kicker">Simple by design</span><h2>Ready to find your next <strong>big opportunity?</strong></h2><p>Start exploring brand partnerships with DealPilot.</p></div><div className="pricing-card"><div><span className="pricing-label">Creator workspace</span><h3>Free to start</h3><p>Discover opportunities, research brands, and build your commercial profile.</p></div><button className="landing-launch" onClick={onLaunch}>Launch DealPilot <span aria-hidden="true">→</span></button></div></section>
-      <section className="landing-faq" id="faq"><div className="landing-section-heading"><span className="landing-kicker">Questions, answered</span><h2>Frequently asked <strong>questions.</strong></h2></div><div className="faq-list"><details><summary>What does DealPilot help creators find?</summary><p>DealPilot surfaces timely brand, campaign, and partnership opportunities matched to your niche and audience.</p></details><details><summary>How does the personalized fit score work?</summary><p>It evaluates your creator profile against audience, content, market, timing, and partnership signals.</p></details><details><summary>Can I update my creator profile later?</summary><p>Yes. Your saved profile remains available from the Profile tab and can be edited whenever your work evolves.</p></details></div></section>
-      <section className="landing-bottom-band"><h2>Built for today’s creators.<br /><strong>Ready for what’s next.</strong></h2><div><span>♧ <b>More opportunities</b><small>Discover brands you wouldn’t find on your own.</small></span><span>◷ <b>Less manual work</b><small>Focus on creating, not searching.</small></span><span>▥ <b>Smarter decisions</b><small>Spend time on the deals that fit.</small></span></div></section>
-      <footer className="landing-footer"><Logo /><span>Find the next right deal.</span><small>© 2026 DealPilot. Built for creators, by AI.</small></footer>
+      <section className="landing-story landing-product" id="product">
+        <div className="landing-story-copy">
+          <span className="landing-kicker">More than a search tool</span>
+          <h2>
+            AI agents that
+            <br />
+            <strong>work for creators.</strong>
+          </h2>
+          <p>
+            DealPilot’s multi-agent system discovers opportunities, researches
+            brands, and evaluates the best fit for your unique content,
+            audience, and goals.
+          </p>
+          <button className="landing-launch" onClick={onLaunch}>
+            Explore the product <span aria-hidden="true">→</span>
+          </button>
+        </div>
+        <div className="agent-map">
+          <div className="agent-map-director">✦ &nbsp; Director Agent</div>
+          <div className="agent-map-line" />
+          <div className="agent-map-cards">
+            <span>
+              ◉<b>Opportunity Agent</b>
+              <small>
+                Brand discovery
+                <br />
+                Campaign search
+                <br />
+                Market signals
+              </small>
+            </span>
+            <span>
+              ▤<b>Research Agent</b>
+              <small>
+                Company research
+                <br />
+                Product analysis
+                <br />
+                Past partnerships
+              </small>
+            </span>
+            <span>
+              ✧<b>Fit Agent</b>
+              <small>
+                Audience fit
+                <br />
+                Brand alignment
+                <br />
+                Recommendation
+              </small>
+            </span>
+          </div>
+          <strong>Structured insights → Real opportunities</strong>
+        </div>
+      </section>
+      <section className="landing-process" id="how-it-works">
+        <div className="landing-section-heading">
+          <h2>
+            How <strong>DealPilot</strong> works
+          </h2>
+          <p>
+            From signal to sponsorship, powered by AI agents and parallel
+            research.
+          </p>
+        </div>
+        <div className="landing-steps">
+          {steps.map((step) => (
+            <article className="landing-step" key={step.number}>
+              <span>{step.number}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="landing-story landing-creators" id="for-creators">
+        <div className="creator-stats">
+          <span>
+            <b>10x</b>
+            <small>Faster research</small>
+          </span>
+          <span>
+            <b>100+</b>
+            <small>Brands discovered daily</small>
+          </span>
+          <span>
+            <b>90%</b>
+            <small>Time saved</small>
+          </span>
+        </div>
+        <div className="landing-story-copy">
+          <span className="landing-kicker">Turn insights into income</span>
+          <h2>
+            A smarter way to
+            <br />
+            <strong>grow as a creator.</strong>
+          </h2>
+          <p>
+            Spend less time searching and more time creating. DealPilot helps
+            you find the right brands, at the right time, with the right
+            message.
+          </p>
+        </div>
+      </section>
+      <section className="landing-pricing" id="pricing">
+        <div className="landing-section-heading">
+          <span className="landing-kicker">Simple by design</span>
+          <h2>
+            Ready to find your next <strong>big opportunity?</strong>
+          </h2>
+          <p>Start exploring brand partnerships with DealPilot.</p>
+        </div>
+        <div className="pricing-card">
+          <div>
+            <span className="pricing-label">Creator workspace</span>
+            <h3>Free to start</h3>
+            <p>
+              Discover opportunities, research brands, and build your commercial
+              profile.
+            </p>
+          </div>
+          <button className="landing-launch" onClick={onLaunch}>
+            Launch DealPilot <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+      <section className="landing-faq" id="faq">
+        <div className="landing-section-heading">
+          <span className="landing-kicker">Questions, answered</span>
+          <h2>
+            Frequently asked <strong>questions.</strong>
+          </h2>
+        </div>
+        <div className="faq-list">
+          <details>
+            <summary>What does DealPilot help creators find?</summary>
+            <p>
+              DealPilot surfaces timely brand, campaign, and partnership
+              opportunities matched to your niche and audience.
+            </p>
+          </details>
+          <details>
+            <summary>How does the personalized fit score work?</summary>
+            <p>
+              It evaluates your creator profile against audience, content,
+              market, timing, and partnership signals.
+            </p>
+          </details>
+          <details>
+            <summary>Can I update my creator profile later?</summary>
+            <p>
+              Yes. Your saved profile remains available from the Profile tab and
+              can be edited whenever your work evolves.
+            </p>
+          </details>
+        </div>
+      </section>
+      <section className="landing-bottom-band">
+        <h2>
+          Built for today’s creators.
+          <br />
+          <strong>Ready for what’s next.</strong>
+        </h2>
+        <div>
+          <span>
+            ♧ <b>More opportunities</b>
+            <small>Discover brands you wouldn’t find on your own.</small>
+          </span>
+          <span>
+            ◷ <b>Less manual work</b>
+            <small>Focus on creating, not searching.</small>
+          </span>
+          <span>
+            ▥ <b>Smarter decisions</b>
+            <small>Spend time on the deals that fit.</small>
+          </span>
+        </div>
+      </section>
+      <footer className="landing-footer">
+        <Logo />
+        <span>Find the next right deal.</span>
+        <small>© 2026 DealPilot. Built for creators, by AI.</small>
+      </footer>
     </main>
   );
 }
@@ -712,7 +1015,10 @@ interface ExtractedOpportunity {
   source_urls?: string[];
 }
 
-function parseOpportunityJson(text: string): { cleanedText: string; opportunities: ExtractedOpportunity[] } {
+function parseOpportunityJson(text: string): {
+  cleanedText: string;
+  opportunities: ExtractedOpportunity[];
+} {
   const opportunities: ExtractedOpportunity[] = [];
   if (!text) return { cleanedText: "", opportunities };
 
@@ -725,32 +1031,49 @@ function parseOpportunityJson(text: string): { cleanedText: string; opportunitie
         opportunities.push({
           company_name: String(item.company_name),
           company_url: item.company_url ? String(item.company_url) : undefined,
-          signal_type: item.signal_type ? String(item.signal_type) : "Commercial Signal",
-          opportunity_description: item.opportunity_description ? String(item.opportunity_description) : "",
-          why_relevant: item.why_relevant ? String(item.why_relevant) : undefined,
+          signal_type: item.signal_type
+            ? String(item.signal_type)
+            : "Commercial Signal",
+          opportunity_description: item.opportunity_description
+            ? String(item.opportunity_description)
+            : "",
+          why_relevant: item.why_relevant
+            ? String(item.why_relevant)
+            : undefined,
           why_now: item.why_now ? String(item.why_now) : undefined,
-          confidence_level: item.confidence_level ? String(item.confidence_level) : "HIGH",
-          confidence: typeof item.confidence === "number" ? item.confidence : 0.9,
-          requirements: Array.isArray(item.requirements) ? item.requirements.map(String) : undefined,
-          source_urls: Array.isArray(item.source_urls) ? item.source_urls.map(String) : undefined,
+          confidence_level: item.confidence_level
+            ? String(item.confidence_level)
+            : "HIGH",
+          confidence:
+            typeof item.confidence === "number" ? item.confidence : 0.9,
+          requirements: Array.isArray(item.requirements)
+            ? item.requirements.map(String)
+            : undefined,
+          source_urls: Array.isArray(item.source_urls)
+            ? item.source_urls.map(String)
+            : undefined,
         });
       }
     }
   };
 
   // 1. Check code blocks with json
-  cleaned = cleaned.replace(/```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/gi, (match, jsonStr) => {
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (Array.isArray(parsed)) extractFromArr(parsed);
-      else if (parsed && typeof parsed === "object") {
-        if (Array.isArray(parsed.opportunities)) extractFromArr(parsed.opportunities);
+  cleaned = cleaned.replace(
+    /```json\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```/gi,
+    (match, jsonStr) => {
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed)) extractFromArr(parsed);
+        else if (parsed && typeof parsed === "object") {
+          if (Array.isArray(parsed.opportunities))
+            extractFromArr(parsed.opportunities);
+        }
+        return "";
+      } catch {
+        return match;
       }
-      return "";
-    } catch {
-      return match;
-    }
-  });
+    },
+  );
 
   // 2. Check top-level or embedded raw JSON objects
   let result = "";
@@ -829,7 +1152,9 @@ function parseAssistantMessage(content: string) {
     body = content.replace(/<think>[\s\S]*?<\/think>/i, "").trim();
   } else {
     // Extract Reasoning/Thinking header at top if present
-    const reasoningMatch = content.match(/^(?:\*\*Thinking:\*\*|\*\*Thought Process:\*\*|\*Thinking:\*|Thinking Process:)\s*\n([\s\S]*?)(?=\n\n|\n#)/i);
+    const reasoningMatch = content.match(
+      /^(?:\*\*Thinking:\*\*|\*\*Thought Process:\*\*|\*Thinking:\*|Thinking Process:)\s*\n([\s\S]*?)(?=\n\n|\n#)/i,
+    );
     if (reasoningMatch) {
       think = reasoningMatch[1].trim();
       body = content.replace(reasoningMatch[0], "").trim();
@@ -881,7 +1206,8 @@ function ThinkingAccordion({ content }: { content: string }) {
       <summary className="thinking-summary">
         <span className="thinking-icon">🧠</span>
         <span className="thinking-title">
-          Thought process ({steps.length} {steps.length === 1 ? "step" : "steps"})
+          Thought process ({steps.length}{" "}
+          {steps.length === 1 ? "step" : "steps"})
         </span>
         <span className="thinking-chevron">{open ? "▲" : "▼"}</span>
       </summary>
@@ -897,7 +1223,11 @@ function ThinkingAccordion({ content }: { content: string }) {
   );
 }
 
-function SourcesSection({ sources }: { sources: { title: string; url: string }[] }) {
+function SourcesSection({
+  sources,
+}: {
+  sources: { title: string; url: string }[];
+}) {
   if (sources.length === 0) return null;
   return (
     <div className="sources-container">
@@ -934,13 +1264,19 @@ function SourcesSection({ sources }: { sources: { title: string; url: string }[]
   );
 }
 
-function ExtractedOpportunitiesCards({ opportunities }: { opportunities: ExtractedOpportunity[] }) {
+function ExtractedOpportunitiesCards({
+  opportunities,
+}: {
+  opportunities: ExtractedOpportunity[];
+}) {
   if (opportunities.length === 0) return null;
   return (
     <div className="chat-extracted-opportunities">
       <div className="chat-extracted-header">
         <span className="extracted-icon">🎯</span>
-        <span>Discovered Commercial Opportunities ({opportunities.length})</span>
+        <span>
+          Discovered Commercial Opportunities ({opportunities.length})
+        </span>
       </div>
       <div className="chat-extracted-grid">
         {opportunities.map((opp, idx) => {
@@ -956,7 +1292,9 @@ function ExtractedOpportunitiesCards({ opportunities }: { opportunities: Extract
           return (
             <div className="chat-opp-card" key={idx}>
               <div className="chat-opp-top">
-                <div className="chat-opp-mark">{opp.company_name.slice(0, 1)}</div>
+                <div className="chat-opp-mark">
+                  {opp.company_name.slice(0, 1)}
+                </div>
                 <div className="chat-opp-title-area">
                   <div className="chat-opp-title-row">
                     <h4>{opp.company_name}</h4>
@@ -976,41 +1314,43 @@ function ExtractedOpportunitiesCards({ opportunities }: { opportunities: Extract
                 </div>
                 <span
                   className={`chat-opp-confidence ${
-                    opp.confidence_level?.toLowerCase() === "high" ? "high" : "med"
+                    opp.confidence_level?.toLowerCase() === "high"
+                      ? "high"
+                      : "med"
                   }`}
                 >
                   {opp.confidence_level || "HIGH"}
                 </span>
               </div>
 
-            <p className="chat-opp-desc">{opp.opportunity_description}</p>
+              <p className="chat-opp-desc">{opp.opportunity_description}</p>
 
-            {opp.why_relevant && (
-              <div className="chat-opp-meta-row">
-                <span className="chat-opp-label">Why Relevant:</span>
-                <span>{opp.why_relevant}</span>
-              </div>
-            )}
+              {opp.why_relevant && (
+                <div className="chat-opp-meta-row">
+                  <span className="chat-opp-label">Why Relevant:</span>
+                  <span>{opp.why_relevant}</span>
+                </div>
+              )}
 
-            {opp.why_now && (
-              <div className="chat-opp-meta-row">
-                <span className="chat-opp-label">Why Now:</span>
-                <span>{opp.why_now}</span>
-              </div>
-            )}
+              {opp.why_now && (
+                <div className="chat-opp-meta-row">
+                  <span className="chat-opp-label">Why Now:</span>
+                  <span>{opp.why_now}</span>
+                </div>
+              )}
 
-            {opp.requirements && opp.requirements.length > 0 && (
-              <div className="chat-opp-reqs">
-                <span className="chat-opp-label">Requirements:</span>
-                <ul>
-                  {opp.requirements.map((req, rIdx) => (
-                    <li key={rIdx}>{req}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        );
+              {opp.requirements && opp.requirements.length > 0 && (
+                <div className="chat-opp-reqs">
+                  <span className="chat-opp-label">Requirements:</span>
+                  <ul>
+                    {opp.requirements.map((req, rIdx) => (
+                      <li key={rIdx}>{req}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
         })}
       </div>
     </div>
@@ -1027,8 +1367,14 @@ function InlineError({
   return (
     <div className="inline-error-card panel">
       <div className="error-text">
-        <strong style={{ color: "var(--danger)" }}>⚠ Unable to load data</strong>
-        <p style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--muted)" }}>{message}</p>
+        <strong style={{ color: "var(--danger)" }}>
+          ⚠ Unable to load data
+        </strong>
+        <p
+          style={{ margin: "4px 0 0", fontSize: "13px", color: "var(--muted)" }}
+        >
+          {message}
+        </p>
       </div>
       <button className="button secondary retry-btn" onClick={onRetry}>
         Retry ↻
@@ -1079,7 +1425,8 @@ function AssistantMessage({
   createdAt?: string;
   onNavigate?: (page: Page, company?: string) => void;
 }) {
-  const { think, body, opportunities, sources } = parseAssistantMessage(content);
+  const { think, body, opportunities, sources } =
+    parseAssistantMessage(content);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -1104,7 +1451,9 @@ function AssistantMessage({
     <article className="chat-message assistant">
       <div className="message-header">
         <span className="message-author">DealPilot</span>
-        <span className="search-powered-badge">⚡ Search powered by Parallel</span>
+        <span className="search-powered-badge">
+          ⚡ Search powered by Parallel
+        </span>
         <button
           className="copy-msg-btn"
           onClick={handleCopy}
@@ -1116,7 +1465,9 @@ function AssistantMessage({
 
       <div className="message-body">
         {think && <ThinkingAccordion content={think} />}
-        {opportunities.length > 0 && <ExtractedOpportunitiesCards opportunities={opportunities} />}
+        {opportunities.length > 0 && (
+          <ExtractedOpportunitiesCards opportunities={opportunities} />
+        )}
         {body && (
           <div
             className="markdown-content"
@@ -1169,14 +1520,20 @@ function TypingIndicator({
     <div className="typing-indicator-wrapper">
       <div className="message-header">
         <span className="typing-indicator-label">DealPilot</span>
-        <span className="search-powered-badge pulse">⚡ Search powered by Parallel</span>
+        <span className="search-powered-badge pulse">
+          ⚡ Search powered by Parallel
+        </span>
       </div>
       <div className="typing-box">
         <details className="thinking-accordion live-thinking" open>
           <summary className="thinking-summary">
             <span className="thinking-icon">🧠</span>
             <span className="thinking-title">
-              {isFinished ? "Analysis complete ✓" : (statusLabel ? statusLabel : "Thinking process…")}
+              {isFinished
+                ? "Analysis complete ✓"
+                : statusLabel
+                  ? statusLabel
+                  : "Thinking process…"}
             </span>
             <span className={isFinished ? "done-dot" : "live-pulse-dot"} />
           </summary>
@@ -1282,7 +1639,11 @@ function ConfirmModal({
         <h3>{title}</h3>
         <p>{description}</p>
         <div className="confirm-actions">
-          <button className="button secondary" onClick={onCancel} disabled={busy}>
+          <button
+            className="button secondary"
+            onClick={onCancel}
+            disabled={busy}
+          >
             Cancel
           </button>
           <button className="button danger" onClick={onConfirm} disabled={busy}>
@@ -1306,7 +1667,11 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
   const [googleModal, setGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
 
-  const handleGoogleAuth = async (email: string, name?: string, credential?: string) => {
+  const handleGoogleAuth = async (
+    email: string,
+    name?: string,
+    credential?: string,
+  ) => {
     setBusy(true);
     setError("");
     try {
@@ -1321,7 +1686,9 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
       localStorage.setItem(storage.token, login.access_token);
       onLogin(await request<User>("/auth/me", { headers: authHeaders() }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Google authentication failed");
+      setError(
+        err instanceof Error ? err.message : "Google authentication failed",
+      );
     } finally {
       setBusy(false);
       setGoogleModal(false);
@@ -1330,11 +1697,17 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
 
   const GOOGLE_CLIENT_ID =
     (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ||
-    ((typeof window !== "undefined" && (window as any).__GOOGLE_CLIENT_ID__) as string | undefined);
+    ((typeof window !== "undefined" && (window as any).__GOOGLE_CLIENT_ID__) as
+      | string
+      | undefined);
 
   const triggerGoogleSignIn = () => {
     setError("");
-    if (GOOGLE_CLIENT_ID && typeof window !== "undefined" && (window as any).google?.accounts?.id) {
+    if (
+      GOOGLE_CLIENT_ID &&
+      typeof window !== "undefined" &&
+      (window as any).google?.accounts?.id
+    ) {
       try {
         (window as any).google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -1364,28 +1737,44 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 const parts = response.credential.split(".");
                 if (parts.length >= 2) {
                   const base64Url = parts[1];
-                  const base64Str = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+                  const base64Str = base64Url
+                    .replace(/-/g, "+")
+                    .replace(/_/g, "/");
                   const jsonPayload = decodeURIComponent(
                     atob(base64Str)
                       .split("")
-                      .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-                      .join("")
+                      .map(
+                        (c) =>
+                          "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2),
+                      )
+                      .join(""),
                   );
                   const parsed = JSON.parse(jsonPayload);
                   parsedEmail = parsed.email || "";
                   parsedName = parsed.name || parsed.given_name || "";
                 }
               } catch (e) {}
-              void handleGoogleAuth(parsedEmail, parsedName, response.credential);
+              void handleGoogleAuth(
+                parsedEmail,
+                parsedName,
+                response.credential,
+              );
             }
           },
         });
 
-        const container = document.getElementById("google-signin-btn-container");
+        const container = document.getElementById(
+          "google-signin-btn-container",
+        );
         if (container) {
           try {
-            const containerWidth = container.offsetWidth || (typeof window !== "undefined" ? window.innerWidth - 64 : 320);
-            const btnWidth = Math.max(200, Math.min(Math.floor(containerWidth), 380));
+            const containerWidth =
+              container.offsetWidth ||
+              (typeof window !== "undefined" ? window.innerWidth - 64 : 320);
+            const btnWidth = Math.max(
+              200,
+              Math.min(Math.floor(containerWidth), 380),
+            );
             (window as any).google.accounts.id.renderButton(container, {
               theme: "outline",
               size: "large",
@@ -1420,8 +1809,6 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
     const email = form.email.trim().toLowerCase();
     const password = form.password;
 
-    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
-
     if (mode === "signup") {
       if (!username || username.length < 3) {
         setError("Username must be at least 3 characters long.");
@@ -1429,24 +1816,12 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
         return;
       }
       if (!email) {
-        setError("Please enter your Gmail address.");
-        setBusy(false);
-        return;
-      }
-      if (!gmailRegex.test(email)) {
-        setError("Only @gmail.com email addresses are allowed (e.g. yourname@gmail.com).");
+        setError("Please enter your email address.");
         setBusy(false);
         return;
       }
       if (password.length < 8) {
         setError("Password must be at least 8 characters long.");
-        setBusy(false);
-        return;
-      }
-    } else {
-      // In login mode: if user types an email address, ensure it is @gmail.com
-      if (username.includes("@") && !gmailRegex.test(username)) {
-        setError("Only @gmail.com email addresses are allowed.");
         setBusy(false);
         return;
       }
@@ -1504,14 +1879,20 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
             <button
               type="button"
               className={mode === "login" ? "active" : ""}
-              onClick={() => { setMode("login"); setError(""); }}
+              onClick={() => {
+                setMode("login");
+                setError("");
+              }}
             >
               Log in
             </button>
             <button
               type="button"
               className={mode === "signup" ? "active" : ""}
-              onClick={() => { setMode("signup"); setError(""); }}
+              onClick={() => {
+                setMode("signup");
+                setError("");
+              }}
             >
               Create account
             </button>
@@ -1533,18 +1914,38 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
             </p>
           </div>
 
-          <div id="google-signin-btn-container" className="google-btn-container">
+          <div
+            id="google-signin-btn-container"
+            className="google-btn-container"
+          >
             <button
               type="button"
               className="button google-button"
               disabled={busy}
               onClick={triggerGoogleSignIn}
             >
-              <svg className="google-icon" viewBox="0 0 24 24" width="18" height="18">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              <svg
+                className="google-icon"
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+              >
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
               </svg>
               <span>Continue with Google</span>
             </button>
@@ -1566,12 +1967,16 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                   setForm({ ...form, username: event.target.value })
                 }
                 autoComplete="username"
-                placeholder={mode === "signup" ? "Choose a username" : "you@gmail.com or username"}
+                placeholder={
+                  mode === "signup"
+                    ? "Choose a username"
+                    : "you@gmail.com or username"
+                }
               />
             </label>
             {mode === "signup" && (
               <label className="auth-field">
-                <span className="auth-field-label">Gmail Address</span>
+                <span className="auth-field-label">Email Address</span>
                 <input
                   type="email"
                   required
@@ -1580,12 +1985,17 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                     setForm({ ...form, email: event.target.value })
                   }
                   autoComplete="email"
-                  placeholder="name@gmail.com"
-                  pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
-                  title="Must be a valid @gmail.com address"
+                  placeholder="name@example.com"
+                  title="Must be a valid email address"
                 />
-                <span style={{ fontSize: "12px", color: "var(--color-text-muted, #8b949e)", marginTop: "2px" }}>
-                  Strictly @gmail.com accounts only
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--color-text-muted, #8b949e)",
+                    marginTop: "2px",
+                  }}
+                >
+                  Use an email address you can access.
                 </span>
               </label>
             )}
@@ -1605,11 +2015,13 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
                 placeholder="••••••••"
               />
             </label>
-            {mode === "signup" && form.password.length > 0 && form.password.length < 8 && (
-              <p className="auth-password-hint">
-                Password must be at least 8 characters
-              </p>
-            )}
+            {mode === "signup" &&
+              form.password.length > 0 &&
+              form.password.length < 8 && (
+                <p className="auth-password-hint">
+                  Password must be at least 8 characters
+                </p>
+              )}
             <button className="button primary auth-submit-btn" disabled={busy}>
               {busy
                 ? "Working…"
@@ -1635,51 +2047,74 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
         </div>
       </section>
 
-
-        {googleModal && (
-          <div className="confirm-backdrop">
-            <div className="confirm-modal" style={{ width: "min(100%, 420px)" }}>
-              <div style={{ margin: "0 auto 12px", width: 44, height: 44, display: "grid", placeItems: "center" }}>
-                <svg viewBox="0 0 24 24" width="36" height="36">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-              </div>
-              <h3>Sign in with Google</h3>
-              <p>Enter your Google Account email to authorize dealdesk access:</p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void handleGoogleAuth(googleEmail);
-                }}
-              >
-                <input
-                  type="email"
-                  required
-                  placeholder="your.email@gmail.com"
-                  value={googleEmail}
-                  onChange={(e) => setGoogleEmail(e.target.value)}
-                  style={{ marginBottom: 16 }}
-                  autoFocus
+      {googleModal && (
+        <div className="confirm-backdrop">
+          <div className="confirm-modal" style={{ width: "min(100%, 420px)" }}>
+            <div
+              style={{
+                margin: "0 auto 12px",
+                width: 44,
+                height: 44,
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="36" height="36">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 />
-                <div className="confirm-actions">
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={() => setGoogleModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="button primary" disabled={busy || !googleEmail.trim()}>
-                    {busy ? "Signing in…" : "Continue"}
-                  </button>
-                </div>
-              </form>
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
             </div>
+            <h3>Sign in with Google</h3>
+            <p>Enter your Google Account email to authorize dealdesk access:</p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleGoogleAuth(googleEmail);
+              }}
+            >
+              <input
+                type="email"
+                required
+                placeholder="your.email@gmail.com"
+                value={googleEmail}
+                onChange={(e) => setGoogleEmail(e.target.value)}
+                style={{ marginBottom: 16 }}
+                autoFocus
+              />
+              <div className="confirm-actions">
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => setGoogleModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button primary"
+                  disabled={busy || !googleEmail.trim()}
+                >
+                  {busy ? "Signing in…" : "Continue"}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
     </main>
   );
 }
@@ -1688,24 +2123,102 @@ function AuthScreen({ onLogin }: { onLogin: (user: User) => void }) {
    PROFILE
    ================================================================ */
 
-const profileWizardSteps = ["Your Content", "Audience", "Platforms", "Location", "All Set!"];
-const profileNiches = ["Film & Cinema", "Gaming", "Technology", "Fashion & Beauty", "Food", "Travel", "Fitness & Wellness", "Education", "Finance", "Lifestyle", "Sports", "Music", "Comedy", "Business", "Photography", "Other"];
-const profilePlatforms = ["YouTube", "Instagram", "TikTok", "Facebook", "X", "Twitch", "LinkedIn", "Pinterest", "Snapchat"];
-const profileAudiences = ["General audience", "Gen Z", "Millennials", "Parents & families", "Business professionals", "Students", "Hobbyists & enthusiasts"];
-const profileLocations = ["United States", "Canada", "United Kingdom", "Australia", "India", "Germany", "France", "Brazil", "Mexico", "Singapore", "United Arab Emirates", "Other"];
+const profileWizardSteps = [
+  "Your Content",
+  "Audience",
+  "Platforms",
+  "Location",
+  "All Set!",
+];
+const profileNiches = [
+  "Film & Cinema",
+  "Gaming",
+  "Technology",
+  "Fashion & Beauty",
+  "Food",
+  "Travel",
+  "Fitness & Wellness",
+  "Education",
+  "Finance",
+  "Lifestyle",
+  "Sports",
+  "Music",
+  "Comedy",
+  "Business",
+  "Photography",
+  "Other",
+];
+const profilePlatforms = [
+  "YouTube",
+  "Instagram",
+  "TikTok",
+  "Facebook",
+  "X",
+  "Twitch",
+  "LinkedIn",
+  "Pinterest",
+  "Snapchat",
+];
+const profileAudiences = [
+  "General audience",
+  "Gen Z",
+  "Millennials",
+  "Parents & families",
+  "Business professionals",
+  "Students",
+  "Hobbyists & enthusiasts",
+];
+const profileLocations = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "India",
+  "Germany",
+  "France",
+  "Brazil",
+  "Mexico",
+  "Singapore",
+  "United Arab Emirates",
+  "Other",
+];
 
-function ProfileForm({ profile, onChange, onNavigate }: { profile: Profile; onChange: (profile: Profile) => void; onNavigate?: (page: Page) => void }) {
+function ProfileForm({
+  profile,
+  onChange,
+  onNavigate,
+}: {
+  profile: Profile;
+  onChange: (profile: Profile) => void;
+  onNavigate?: (page: Page) => void;
+}) {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1].split(", ").filter(Boolean) || [];
+  const savedAudience =
+    profile.audience_description
+      ?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1]
+      .split(", ")
+      .filter(Boolean) || [];
   const [audienceTypes, setAudienceTypes] = useState(savedAudience);
-  const update = (changes: Partial<Profile>) => onChange({ ...profile, ...changes });
-  const requiredComplete = Boolean(profile.niche?.trim() && profile.platforms.length && profile.region?.trim() && profile.audience_size && profile.audience_size > 0);
+  const update = (changes: Partial<Profile>) =>
+    onChange({ ...profile, ...changes });
+  const requiredComplete = Boolean(
+    profile.niche?.trim() &&
+    profile.platforms.length &&
+    profile.region?.trim() &&
+    profile.audience_size &&
+    profile.audience_size > 0,
+  );
 
   const canContinue = () => {
     if (step === 0) return Boolean(profile.niche);
-    if (step === 1) return Boolean(audienceTypes.length && profile.audience_size && profile.audience_size > 0);
+    if (step === 1)
+      return Boolean(
+        audienceTypes.length &&
+        profile.audience_size &&
+        profile.audience_size > 0,
+      );
     if (step === 2) return profile.platforms.length > 0;
     if (step === 3) return Boolean(profile.region);
     return true;
@@ -1714,29 +2227,272 @@ function ProfileForm({ profile, onChange, onNavigate }: { profile: Profile; onCh
   const save = async () => {
     setBusy(true);
     try {
-      const description = audienceTypes.length ? `Audience: ${audienceTypes.join(", ")}` : null;
-      const saved = await request<Profile>("/agent/profile", { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ ...profile, creator_name: profile.creator_name || null, niche: profile.niche || null, region: profile.region || null, audience_description: description || null }) });
+      const description = audienceTypes.length
+        ? `Audience: ${audienceTypes.join(", ")}`
+        : null;
+      const saved = await request<Profile>("/agent/profile", {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          ...profile,
+          creator_name: profile.creator_name || null,
+          niche: profile.niche || null,
+          region: profile.region || null,
+          audience_description: description || null,
+        }),
+      });
       onChange(profileForForm(saved));
       localStorage.setItem("dealpilot:profile_completed", "true");
       toast.success("Creator profile saved successfully.");
       onNavigate?.("conversations");
-    } catch (err) { toastForError(toast, err, "Unable to save profile"); } finally { setBusy(false); }
+    } catch (err) {
+      toastForError(toast, err, "Unable to save profile");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="profile-wizard">
-      <div className="wizard-progress"><span>Step {step + 1} of {profileWizardSteps.length}</span><span>{Math.round(((step + 1) / profileWizardSteps.length) * 100)}% complete</span></div>
-      <div className="wizard-progress-bar"><i style={{ width: `${((step + 1) / profileWizardSteps.length) * 100}%` }} /></div>
-      <div className="wizard-stepper">{profileWizardSteps.map((label, index) => <button type="button" key={label} className={index === step ? "active" : index < step ? "done" : ""} onClick={() => index <= step && setStep(index)}><span>{index < step ? "✓" : index + 1}</span><b>{label}</b><small>{index === 0 ? "Let’s get to know you" : index === 1 ? "Your reach & community" : index === 2 ? "Where you create" : index === 3 ? "Your country" : "Start exploring"}</small></button>)}</div>
-      <form className="wizard-content" onSubmit={(event) => { event.preventDefault(); if (step < profileWizardSteps.length - 1) { if (canContinue()) setStep(step + 1); else toast.warning("Please complete this step before continuing."); } else void save(); }}>
-        {step === 0 && <><span className="wizard-required">• Required</span><h2>What’s your primary content niche?</h2><p>Select the option that best describes the type of content you create.</p><div className="wizard-options niche-options">{profileNiches.map((option) => <button type="button" key={option} className={profile.niche === option ? "selected" : ""} onClick={() => update({ niche: option })}><span className="wizard-option-icon">{["🎬", "🎮", "💻", "💄", "🍔", "✈️", "🏋️", "📚", "📊", "💗", "⚽", "🎵", "😊", "💼", "📷", "•••"][profileNiches.indexOf(option)]}</span><b>{option}</b><small>{option === "Technology" ? "Tech reviews, gadgets, AI, software" : option === "Gaming" ? "Gameplay, streaming, esports" : `Create ${option.toLowerCase()} content`}</small>{profile.niche === option && <em>✓</em>}</button>)}</div></>}
-        {step === 1 && <><h2>Who is your audience?</h2><p>Select all the audience groups you reach and tell us how large your community is.</p><div className="wizard-options compact-options">{profileAudiences.map((option) => <button type="button" key={option} className={audienceTypes.includes(option) ? "selected" : ""} onClick={() => setAudienceTypes(audienceTypes.includes(option) ? audienceTypes.filter((item) => item !== option) : [...audienceTypes, option])}><b>{option}</b>{audienceTypes.includes(option) && <em>✓</em>}</button>)}</div><label className="wizard-number-field">Audience size *<input type="number" min="1" value={profile.audience_size ?? ""} onChange={(event) => update({ audience_size: event.target.value ? Number(event.target.value) : null })} placeholder="Enter your audience size" /></label></>}
-        {step === 2 && <><h2>Which platforms do you create on?</h2><p>Select all platforms where you publish content.</p><div className="wizard-options compact-options platform-options">{profilePlatforms.map((option) => <button type="button" key={option} className={profile.platforms.includes(option) ? "selected" : ""} onClick={() => update({ platforms: profile.platforms.includes(option) ? profile.platforms.filter((item) => item !== option) : [...profile.platforms, option] })}><b>{option}</b>{profile.platforms.includes(option) && <em>✓</em>}</button>)}</div></>}
-        {step === 3 && <><h2>Where is your audience located?</h2><p>Choose the country that best represents your audience.</p><div className="wizard-options compact-options">{profileLocations.map((option) => <button type="button" key={option} className={profile.region === option ? "selected" : ""} onClick={() => update({ region: option })}><b>{option}</b>{profile.region === option && <em>✓</em>}</button>)}</div></>}
-        {step === 4 && <><h2>Your creator profile is ready.</h2><p>Review your selections. You can update these details later from your Profile tab.</p><div className="wizard-review">{[["Content niche", profile.niche], ["Audience", audienceTypes.join(", ")], ["Audience size", profile.audience_size?.toLocaleString()], ["Platforms", profile.platforms.join(", ")], ["Country", profile.region]].map(([label, value]) => <div key={label}><small>{label}</small><b>{value || "Not provided"}</b></div>)}</div></>}
-        <div className="wizard-actions">{step > 0 && <button type="button" className="button secondary" onClick={() => setStep(step - 1)}>← Back</button>}<button className="button primary profile-save-btn" disabled={busy}>{busy ? "Saving…" : step === profileWizardSteps.length - 1 ? "Save profile" : "Continue →"}</button></div>
+      <div className="wizard-progress">
+        <span>
+          Step {step + 1} of {profileWizardSteps.length}
+        </span>
+        <span>
+          {Math.round(((step + 1) / profileWizardSteps.length) * 100)}% complete
+        </span>
+      </div>
+      <div className="wizard-progress-bar">
+        <i
+          style={{
+            width: `${((step + 1) / profileWizardSteps.length) * 100}%`,
+          }}
+        />
+      </div>
+      <div className="wizard-stepper">
+        {profileWizardSteps.map((label, index) => (
+          <button
+            type="button"
+            key={label}
+            className={index === step ? "active" : index < step ? "done" : ""}
+            onClick={() => index <= step && setStep(index)}
+          >
+            <span>{index < step ? "✓" : index + 1}</span>
+            <b>{label}</b>
+            <small>
+              {index === 0
+                ? "Let’s get to know you"
+                : index === 1
+                  ? "Your reach & community"
+                  : index === 2
+                    ? "Where you create"
+                    : index === 3
+                      ? "Your country"
+                      : "Start exploring"}
+            </small>
+          </button>
+        ))}
+      </div>
+      <form
+        className="wizard-content"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (step < profileWizardSteps.length - 1) {
+            if (canContinue()) setStep(step + 1);
+            else toast.warning("Please complete this step before continuing.");
+          } else void save();
+        }}
+      >
+        {step === 0 && (
+          <>
+            <span className="wizard-required">• Required</span>
+            <h2>What’s your primary content niche?</h2>
+            <p>
+              Select the option that best describes the type of content you
+              create.
+            </p>
+            <div className="wizard-options niche-options">
+              {profileNiches.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={profile.niche === option ? "selected" : ""}
+                  onClick={() => update({ niche: option })}
+                >
+                  <span className="wizard-option-icon">
+                    {
+                      [
+                        "🎬",
+                        "🎮",
+                        "💻",
+                        "💄",
+                        "🍔",
+                        "✈️",
+                        "🏋️",
+                        "📚",
+                        "📊",
+                        "💗",
+                        "⚽",
+                        "🎵",
+                        "😊",
+                        "💼",
+                        "📷",
+                        "•••",
+                      ][profileNiches.indexOf(option)]
+                    }
+                  </span>
+                  <b>{option}</b>
+                  <small>
+                    {option === "Technology"
+                      ? "Tech reviews, gadgets, AI, software"
+                      : option === "Gaming"
+                        ? "Gameplay, streaming, esports"
+                        : `Create ${option.toLowerCase()} content`}
+                  </small>
+                  {profile.niche === option && <em>✓</em>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {step === 1 && (
+          <>
+            <h2>Who is your audience?</h2>
+            <p>
+              Select all the audience groups you reach and tell us how large
+              your community is.
+            </p>
+            <div className="wizard-options compact-options">
+              {profileAudiences.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={audienceTypes.includes(option) ? "selected" : ""}
+                  onClick={() =>
+                    setAudienceTypes(
+                      audienceTypes.includes(option)
+                        ? audienceTypes.filter((item) => item !== option)
+                        : [...audienceTypes, option],
+                    )
+                  }
+                >
+                  <b>{option}</b>
+                  {audienceTypes.includes(option) && <em>✓</em>}
+                </button>
+              ))}
+            </div>
+            <label className="wizard-number-field">
+              Audience size *
+              <input
+                type="number"
+                min="1"
+                value={profile.audience_size ?? ""}
+                onChange={(event) =>
+                  update({
+                    audience_size: event.target.value
+                      ? Number(event.target.value)
+                      : null,
+                  })
+                }
+                placeholder="Enter your audience size"
+              />
+            </label>
+          </>
+        )}
+        {step === 2 && (
+          <>
+            <h2>Which platforms do you create on?</h2>
+            <p>Select all platforms where you publish content.</p>
+            <div className="wizard-options compact-options platform-options">
+              {profilePlatforms.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={
+                    profile.platforms.includes(option) ? "selected" : ""
+                  }
+                  onClick={() =>
+                    update({
+                      platforms: profile.platforms.includes(option)
+                        ? profile.platforms.filter((item) => item !== option)
+                        : [...profile.platforms, option],
+                    })
+                  }
+                >
+                  <b>{option}</b>
+                  {profile.platforms.includes(option) && <em>✓</em>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {step === 3 && (
+          <>
+            <h2>Where is your audience located?</h2>
+            <p>Choose the country that best represents your audience.</p>
+            <div className="wizard-options compact-options">
+              {profileLocations.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={profile.region === option ? "selected" : ""}
+                  onClick={() => update({ region: option })}
+                >
+                  <b>{option}</b>
+                  {profile.region === option && <em>✓</em>}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {step === 4 && (
+          <>
+            <h2>Your creator profile is ready.</h2>
+            <p>
+              Review your selections. You can update these details later from
+              your Profile tab.
+            </p>
+            <div className="wizard-review">
+              {[
+                ["Content niche", profile.niche],
+                ["Audience", audienceTypes.join(", ")],
+                ["Audience size", profile.audience_size?.toLocaleString()],
+                ["Platforms", profile.platforms.join(", ")],
+                ["Country", profile.region],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <small>{label}</small>
+                  <b>{value || "Not provided"}</b>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        <div className="wizard-actions">
+          {step > 0 && (
+            <button
+              type="button"
+              className="button secondary"
+              onClick={() => setStep(step - 1)}
+            >
+              ← Back
+            </button>
+          )}
+          <button className="button primary profile-save-btn" disabled={busy}>
+            {busy
+              ? "Saving…"
+              : step === profileWizardSteps.length - 1
+                ? "Save profile"
+                : "Continue →"}
+          </button>
+        </div>
       </form>
-      {requiredComplete && <p className="wizard-edit-note">Your saved details are shown in your profile summary and can be edited here.</p>}
+      {requiredComplete && (
+        <p className="wizard-edit-note">
+          Your saved details are shown in your profile summary and can be edited
+          here.
+        </p>
+      )}
     </div>
   );
 }
@@ -1752,7 +2508,9 @@ function ProfilePage({
 }) {
   const ready = isProfileComplete(profile);
   const [editing, setEditing] = useState(!ready);
-  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1] || "Not provided";
+  const savedAudience =
+    profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1] ||
+    "Not provided";
 
   return (
     <PageFrame
@@ -1764,7 +2522,10 @@ function ProfilePage({
         <div className="profile-complete-banner">
           <div>
             <span className="banner-badge">✓ Profile Set Up Complete</span>
-            <p>Your profile is fully configured. Start chatting with DealPilot Agent to evaluate sponsor opportunities.</p>
+            <p>
+              Your profile is fully configured. Start chatting with DealPilot
+              Agent to evaluate sponsor opportunities.
+            </p>
           </div>
           {onNavigate && (
             <button
@@ -1780,22 +2541,67 @@ function ProfilePage({
         {ready && !editing ? (
           <section className="panel saved-profile-panel">
             <div className="panel-heading">
-              <div><span className="kicker">Saved profile</span><h3>Your creator details</h3></div>
-              <button className="button secondary" onClick={() => setEditing(true)}>Edit profile</button>
+              <div>
+                <span className="kicker">Saved profile</span>
+                <h3>Your creator details</h3>
+              </div>
+              <button
+                className="button secondary"
+                onClick={() => setEditing(true)}
+              >
+                Edit profile
+              </button>
             </div>
             <div className="saved-profile-grid">
-              <div><small>Content niche</small><strong>{profile.niche}</strong></div>
-              <div><small>Audience</small><strong>{savedAudience}</strong></div>
-              <div><small>Audience size</small><strong>{profile.audience_size?.toLocaleString()}</strong></div>
-              <div><small>Platforms</small><strong>{profile.platforms.join(", ")}</strong></div>
-              <div><small>Country</small><strong>{profile.region}</strong></div>
+              <div>
+                <small>Content niche</small>
+                <strong>{profile.niche}</strong>
+              </div>
+              <div>
+                <small>Audience</small>
+                <strong>{savedAudience}</strong>
+              </div>
+              <div>
+                <small>Audience size</small>
+                <strong>{profile.audience_size?.toLocaleString()}</strong>
+              </div>
+              <div>
+                <small>Platforms</small>
+                <strong>{profile.platforms.join(", ")}</strong>
+              </div>
+              <div>
+                <small>Country</small>
+                <strong>{profile.region}</strong>
+              </div>
             </div>
-            {onNavigate && <button className="button primary" onClick={() => onNavigate("conversations")}>Converse with Agent →</button>}
+            {onNavigate && (
+              <button
+                className="button primary"
+                onClick={() => onNavigate("conversations")}
+              >
+                Converse with Agent →
+              </button>
+            )}
           </section>
         ) : (
           <section className="panel">
-            <div className="panel-heading"><div><span className="kicker">{ready ? "Edit profile" : "Profile setup"}</span><h3>{ready ? "Update your creator details" : "Create your creator profile"}</h3></div></div>
-            <ProfileForm profile={profile} onChange={onChange} onNavigate={onNavigate} />
+            <div className="panel-heading">
+              <div>
+                <span className="kicker">
+                  {ready ? "Edit profile" : "Profile setup"}
+                </span>
+                <h3>
+                  {ready
+                    ? "Update your creator details"
+                    : "Create your creator profile"}
+                </h3>
+              </div>
+            </div>
+            <ProfileForm
+              profile={profile}
+              onChange={onChange}
+              onNavigate={onNavigate}
+            />
           </section>
         )}
       </div>
@@ -1946,7 +2752,9 @@ function SignalCard({
   const score =
     typeof opportunity.confidence === "number"
       ? Math.round(
-          opportunity.confidence <= 1 ? opportunity.confidence * 100 : opportunity.confidence
+          opportunity.confidence <= 1
+            ? opportunity.confidence * 100
+            : opportunity.confidence,
         )
       : 90;
   const confText = (opportunity.confidence_level || "HIGH").toUpperCase();
@@ -1980,7 +2788,11 @@ function SignalCard({
               </p>
             )}
             <p className="signal-company-status">
-              {truncate(opportunity.signal_type || "Creator partnership activity detected", 64)}
+              {truncate(
+                opportunity.signal_type ||
+                  "Creator partnership activity detected",
+                64,
+              )}
             </p>
           </div>
         </div>
@@ -1995,7 +2807,10 @@ function SignalCard({
         <div className="signal-reason-col">
           <div className="signal-reason-pill">Why you</div>
           <p className="signal-reason-text">
-            {truncate(opportunity.why_relevant || "High affinity audience match", 120)}
+            {truncate(
+              opportunity.why_relevant || "High affinity audience match",
+              120,
+            )}
           </p>
         </div>
         <div className="signal-reason-col">
@@ -2073,25 +2888,36 @@ function OverviewPage({
   const [loading, setLoading] = useState(true);
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
 
-  const isOpportunityResearched = (opp: Opportunity | null | undefined): boolean => {
+  const isOpportunityResearched = (
+    opp: Opportunity | null | undefined,
+  ): boolean => {
     if (!opp) return false;
     return researchList.some(
       (r) =>
         (r.opportunity_id === opp.id ||
-          (r.company_name && opp.company_name && r.company_name.trim().toLowerCase() === opp.company_name.trim().toLowerCase())) &&
-        (r.status === "COMPLETED" || r.status === "DONE" || Boolean(r.summary) || (r.products && r.products.length > 0))
+          (r.company_name &&
+            opp.company_name &&
+            r.company_name.trim().toLowerCase() ===
+              opp.company_name.trim().toLowerCase())) &&
+        (r.status === "COMPLETED" ||
+          r.status === "DONE" ||
+          Boolean(r.summary) ||
+          (r.products && r.products.length > 0)),
     );
   };
 
   useEffect(() => {
     setLoading(true);
     Promise.allSettled([
-      request<Opportunity[]>("/agent/opportunities", { headers: authHeaders() }),
+      request<Opportunity[]>("/agent/opportunities", {
+        headers: authHeaders(),
+      }),
       request<Research[]>("/agent/research", { headers: authHeaders() }),
       request<FitResult[]>("/agent/fit", { headers: authHeaders() }),
     ])
       .then(([oppRes, resRes, fitRes]) => {
-        if (oppRes.status === "fulfilled") setOpportunities(dedupeByCompany(oppRes.value));
+        if (oppRes.status === "fulfilled")
+          setOpportunities(dedupeByCompany(oppRes.value));
         if (resRes.status === "fulfilled") setResearchList(resRes.value);
         if (fitRes.status === "fulfilled") setFitList(fitRes.value);
       })
@@ -2099,7 +2925,9 @@ function OverviewPage({
   }, []);
 
   const strongFitsCount = fitList.filter(
-    (f) => (f.overall_score ?? 0) >= 70 || (f.recommendation && f.recommendation.toLowerCase().includes("strong")),
+    (f) =>
+      (f.overall_score ?? 0) >= 70 ||
+      (f.recommendation && f.recommendation.toLowerCase().includes("strong")),
   ).length;
   const highConfOppsCount = opportunities.filter(
     (item) =>
@@ -2120,14 +2948,22 @@ function OverviewPage({
     const scoreB = typeof b.confidence === "number" ? b.confidence : 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
     // High-confidence text comes first
-    const isHighA = a.confidence_level.toLowerCase().includes("high") || a.confidence_level.toLowerCase().includes("strong");
-    const isHighB = b.confidence_level.toLowerCase().includes("high") || b.confidence_level.toLowerCase().includes("strong");
+    const isHighA =
+      a.confidence_level.toLowerCase().includes("high") ||
+      a.confidence_level.toLowerCase().includes("strong");
+    const isHighB =
+      b.confidence_level.toLowerCase().includes("high") ||
+      b.confidence_level.toLowerCase().includes("strong");
     return (isHighB ? 1 : 0) - (isHighA ? 1 : 0);
   })[0];
 
   const handleAction = (type: "research" | "fit", item: Opportunity) => {
     if (onStartChatAction) {
-      onStartChatAction({ type, opportunityId: item.id, companyName: item.company_name });
+      onStartChatAction({
+        type,
+        opportunityId: item.id,
+        companyName: item.company_name,
+      });
     } else {
       onNavigate(type === "research" ? "research" : "fit", item.company_name);
     }
@@ -2157,7 +2993,8 @@ function OverviewPage({
         )}
         {profile.audience_size && (
           <span className="profile-badge-pill">
-            👥 Audience: <strong>{profile.audience_size.toLocaleString()}</strong>
+            👥 Audience:{" "}
+            <strong>{profile.audience_size.toLocaleString()}</strong>
           </span>
         )}
         {profile.region && (
@@ -2169,9 +3006,21 @@ function OverviewPage({
 
       {/* KPI Dashboard */}
       <div className="stats-grid">
-        <StatCard value={String(opportunities.length)} label="Active Signals" tone="blue" />
-        <StatCard value={String(researchList.length)} label="Researched Brands" tone="blue" />
-        <StatCard value={String(strongFitsCount || highConfOppsCount)} label="High-Fit Brands" tone="green" />
+        <StatCard
+          value={String(opportunities.length)}
+          label="Active Signals"
+          tone="blue"
+        />
+        <StatCard
+          value={String(researchList.length)}
+          label="Researched Brands"
+          tone="blue"
+        />
+        <StatCard
+          value={String(strongFitsCount || highConfOppsCount)}
+          label="High-Fit Brands"
+          tone="green"
+        />
       </div>
 
       {/* Needs Your Attention Hero Section */}
@@ -2181,7 +3030,10 @@ function OverviewPage({
             <span className="kicker">Needs your attention</span>
             <h2>Top Brand Signal</h2>
           </div>
-          <button className="text-button" onClick={() => onNavigate("opportunities")}>
+          <button
+            className="text-button"
+            onClick={() => onNavigate("opportunities")}
+          >
             View all signals ({opportunities.length}) →
           </button>
         </div>
@@ -2195,18 +3047,24 @@ function OverviewPage({
             onFit={() => handleAction("fit", featuredSignal)}
             isResearched={isOpportunityResearched(featuredSignal)}
             onFitDisabled={() =>
-              toast.info("Firstly research has to be performed, after that fit analysis will be done.")
+              toast.info(
+                "Firstly research has to be performed, after that fit analysis will be done.",
+              )
             }
           />
         ) : (
           <p className="muted">
-            Use DealPilot Chat to discover brand partnership opportunities for your niche.
+            Use DealPilot Chat to discover brand partnership opportunities for
+            your niche.
           </p>
         )}
       </section>
 
       {/* Quick Launchpad Section */}
-      <div className="section-heading page-section-heading" style={{ marginTop: 28 }}>
+      <div
+        className="section-heading page-section-heading"
+        style={{ marginTop: 28 }}
+      >
         <div>
           <span className="kicker dark">DealPilot Launchpad</span>
           <h2>What would you like to do?</h2>
@@ -2216,30 +3074,41 @@ function OverviewPage({
         <div className="launchpad-card" onClick={handleQuickPrompt}>
           <div className="launchpad-icon">🚀</div>
           <div className="launchpad-title">Discover New Signals</div>
-          <div className="launchpad-desc">Ask AI DealPilot to discover live brand opportunities in your niche.</div>
+          <div className="launchpad-desc">
+            Ask AI DealPilot to discover live brand opportunities in your niche.
+          </div>
         </div>
 
         <div className="launchpad-card" onClick={() => onNavigate("fit")}>
           <div className="launchpad-icon">🎯</div>
           <div className="launchpad-title">Evaluate Brand Fit</div>
-          <div className="launchpad-desc">Calculate brand alignment scores and target audience synergy.</div>
+          <div className="launchpad-desc">
+            Calculate brand alignment scores and target audience synergy.
+          </div>
         </div>
 
         <div className="launchpad-card" onClick={() => onNavigate("research")}>
           <div className="launchpad-icon">🔍</div>
           <div className="launchpad-title">Explore Research Hub</div>
-          <div className="launchpad-desc">Access financial metrics, campaign budgets, and contact info.</div>
+          <div className="launchpad-desc">
+            Access financial metrics, campaign budgets, and contact info.
+          </div>
         </div>
 
         <div className="launchpad-card" onClick={() => onNavigate("profile")}>
           <div className="launchpad-icon">👤</div>
           <div className="launchpad-title">Commercial Profile</div>
-          <div className="launchpad-desc">Refine your niche, audience size, and platform channels.</div>
+          <div className="launchpad-desc">
+            Refine your niche, audience size, and platform channels.
+          </div>
         </div>
       </div>
 
       {/* Recent Signals Feed */}
-      <div className="section-heading page-section-heading" style={{ marginTop: 28 }}>
+      <div
+        className="section-heading page-section-heading"
+        style={{ marginTop: 28 }}
+      >
         <div>
           <span className="kicker dark">Recent Signals</span>
           <h2>Commercial pipeline activity</h2>
@@ -2256,7 +3125,8 @@ function OverviewPage({
           </div>
         ) : opportunities.length === 0 ? (
           <p className="muted" style={{ padding: 14 }}>
-            No opportunity records found. Use the DealPilot Chat to generate brand opportunities.
+            No opportunity records found. Use the DealPilot Chat to generate
+            brand opportunities.
           </p>
         ) : (
           opportunities.slice(0, 4).map((item) => (
@@ -2265,7 +3135,9 @@ function OverviewPage({
               className="clickable-row"
               onClick={() => setSelectedOpp(item)}
             >
-              <span className="company-mark small">{item.company_name.slice(0, 1)}</span>
+              <span className="company-mark small">
+                {item.company_name.slice(0, 1)}
+              </span>
               <strong>{item.company_name}</strong>
               <span>{item.signal_type}</span>
               <span className="confidence green">{item.confidence_level}</span>
@@ -2276,39 +3148,52 @@ function OverviewPage({
       </div>
 
       {/* Side Drawer for Selected Opportunity */}
-      <DetailDrawer isOpen={Boolean(selectedOpp)} onClose={() => setSelectedOpp(null)}>
+      <DetailDrawer
+        isOpen={Boolean(selectedOpp)}
+        onClose={() => setSelectedOpp(null)}
+      >
         {selectedOpp && (
           <div style={{ padding: 24 }}>
             <div className="drawer-header">
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span className="company-mark">{selectedOpp.company_name.slice(0, 1)}</span>
+                <span className="company-mark">
+                  {selectedOpp.company_name.slice(0, 1)}
+                </span>
                 <div>
                   <h2 style={{ margin: 0 }}>{selectedOpp.company_name}</h2>
                   <span className="kicker">{selectedOpp.signal_type}</span>
                 </div>
               </div>
-              <button className="icon-button" onClick={() => setSelectedOpp(null)}>
+              <button
+                className="icon-button"
+                onClick={() => setSelectedOpp(null)}
+              >
                 ✕
               </button>
             </div>
 
             <div style={{ marginTop: 20 }}>
               <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                <span className="confidence green">Confidence: {selectedOpp.confidence_level}</span>
-                {selectedOpp.source_urls && selectedOpp.source_urls.length > 0 && (
-                  <a
-                    href={selectedOpp.source_urls[0]}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ fontSize: 12, color: "var(--accent)" }}
-                  >
-                    🔗 View Source
-                  </a>
-                )}
+                <span className="confidence green">
+                  Confidence: {selectedOpp.confidence_level}
+                </span>
+                {selectedOpp.source_urls &&
+                  selectedOpp.source_urls.length > 0 && (
+                    <a
+                      href={selectedOpp.source_urls[0]}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ fontSize: 12, color: "var(--accent)" }}
+                    >
+                      🔗 View Source
+                    </a>
+                  )}
               </div>
 
               <h3>Signal Description</h3>
-              <p style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>{selectedOpp.opportunity_description}</p>
+              <p style={{ color: "var(--fg-muted)", lineHeight: 1.6 }}>
+                {selectedOpp.opportunity_description}
+              </p>
 
               {selectedOpp.why_relevant && (
                 <p style={{ marginTop: 12 }}>
@@ -2338,7 +3223,9 @@ function OverviewPage({
                   onClick={() => {
                     const opp = selectedOpp!;
                     if (!isOpportunityResearched(opp)) {
-                      toast.info("Firstly research has to be performed, after that fit analysis will be done.");
+                      toast.info(
+                        "Firstly research has to be performed, after that fit analysis will be done.",
+                      );
                       return;
                     }
                     setSelectedOpp(null);
@@ -2409,15 +3296,21 @@ function OpportunitiesPage({
 }) {
   const toast = useToast();
   const [items, setItems] = useState<Opportunity[]>([]);
-  const [researchedCompanies, setResearchedCompanies] = useState<Set<string>>(new Set());
-  const [researchedOppIds, setResearchedOppIds] = useState<Set<number>>(new Set());
+  const [researchedCompanies, setResearchedCompanies] = useState<Set<string>>(
+    new Set(),
+  );
+  const [researchedOppIds, setResearchedOppIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [selected, setSelected] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorStr, setErrorStr] = useState<string | null>(null);
 
   // Search, Filter & Pagination State
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "high" | "direct">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "high" | "direct">(
+    "all",
+  );
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchItems = async () => {
@@ -2425,8 +3318,12 @@ function OpportunitiesPage({
     setErrorStr(null);
     try {
       const [oppResult, researchResult] = await Promise.all([
-        request<Opportunity[]>("/agent/opportunities", { headers: authHeaders() }),
-        request<Research[]>("/agent/research", { headers: authHeaders() }).catch(() => [] as Research[]),
+        request<Opportunity[]>("/agent/opportunities", {
+          headers: authHeaders(),
+        }),
+        request<Research[]>("/agent/research", {
+          headers: authHeaders(),
+        }).catch(() => [] as Research[]),
       ]);
       setItems(dedupeByCompany(oppResult));
 
@@ -2448,7 +3345,8 @@ function OpportunitiesPage({
       setLoading(false);
     } catch (err) {
       setLoading(false);
-      const msg = err instanceof Error ? err.message : "Unable to load opportunities";
+      const msg =
+        err instanceof Error ? err.message : "Unable to load opportunities";
       setErrorStr(msg);
       toastForError(toast, err, "Unable to load opportunities");
     }
@@ -2458,10 +3356,16 @@ function OpportunitiesPage({
     void fetchItems();
   }, []);
 
-  const isOpportunityResearched = (opp: Opportunity | null | undefined): boolean => {
+  const isOpportunityResearched = (
+    opp: Opportunity | null | undefined,
+  ): boolean => {
     if (!opp) return false;
     if (researchedOppIds.has(opp.id)) return true;
-    if (opp.company_name && researchedCompanies.has(opp.company_name.trim().toLowerCase())) return true;
+    if (
+      opp.company_name &&
+      researchedCompanies.has(opp.company_name.trim().toLowerCase())
+    )
+      return true;
     return false;
   };
 
@@ -2490,7 +3394,9 @@ function OpportunitiesPage({
     const matchesSearch =
       !searchQuery.trim() ||
       item.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.opportunity_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.opportunity_description
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       item.signal_type.toLowerCase().includes(searchQuery.toLowerCase());
 
     if (!matchesSearch) return false;
@@ -2604,7 +3510,9 @@ function OpportunitiesPage({
                   onFit={() => runAction("fit", item)}
                   isResearched={isOpportunityResearched(item)}
                   onFitDisabled={() =>
-                    toast.info("Firstly research has to be performed, after that fit analysis will be done.")
+                    toast.info(
+                      "Firstly research has to be performed, after that fit analysis will be done.",
+                    )
                   }
                 />
               </div>
@@ -2615,8 +3523,8 @@ function OpportunitiesPage({
             <div className="pagination-bar">
               <span className="pagination-info">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} -{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} records
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}{" "}
+                of {filteredItems.length} records
               </span>
               <div className="pagination-buttons">
                 <button
@@ -2632,7 +3540,9 @@ function OpportunitiesPage({
                 <button
                   className="pagination-btn"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(p + 1, totalPages))
+                  }
                 >
                   Next →
                 </button>
@@ -2643,7 +3553,10 @@ function OpportunitiesPage({
       )}
 
       {/* Side Drawer for Selected Detail */}
-      <DetailDrawer isOpen={Boolean(selected)} onClose={() => setSelected(null)}>
+      <DetailDrawer
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+      >
         {selected && (
           <>
             <div className="drawer-header">
@@ -2660,8 +3573,14 @@ function OpportunitiesPage({
                 {(selected.source_urls?.[0] || selected.company_url) && (
                   <a
                     className="button secondary"
-                    style={{ textDecoration: "none", fontSize: "11px", padding: "6px 12px" }}
-                    href={selected.source_urls?.[0] || selected.company_url || "#"}
+                    style={{
+                      textDecoration: "none",
+                      fontSize: "11px",
+                      padding: "6px 12px",
+                    }}
+                    href={
+                      selected.source_urls?.[0] || selected.company_url || "#"
+                    }
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -2678,7 +3597,10 @@ function OpportunitiesPage({
                     setSelected(null);
                   }}
                 />
-                <button className="drawer-close-btn" onClick={() => setSelected(null)}>
+                <button
+                  className="drawer-close-btn"
+                  onClick={() => setSelected(null)}
+                >
                   Close ✕
                 </button>
               </div>
@@ -2687,34 +3609,68 @@ function OpportunitiesPage({
             <div className="drawer-content">
               <div className="detail-grid-layout">
                 <div>
-                  <strong className="detail-section-title">Overview & Match Rationale</strong>
-                  <p className="detail-text">{selected.opportunity_description || selected.why_relevant}</p>
-                  {selected.opportunity_description && selected.why_relevant && (
-                    <p className="detail-subtext"><strong>Why Relevant:</strong> {selected.why_relevant}</p>
-                  )}
+                  <strong className="detail-section-title">
+                    Overview & Match Rationale
+                  </strong>
+                  <p className="detail-text">
+                    {selected.opportunity_description || selected.why_relevant}
+                  </p>
+                  {selected.opportunity_description &&
+                    selected.why_relevant && (
+                      <p className="detail-subtext">
+                        <strong>Why Relevant:</strong> {selected.why_relevant}
+                      </p>
+                    )}
                   {selected.why_now && (
-                    <p className="detail-subtext"><strong>Why Now Signal:</strong> {selected.why_now}</p>
+                    <p className="detail-subtext">
+                      <strong>Why Now Signal:</strong> {selected.why_now}
+                    </p>
                   )}
                 </div>
 
                 <div>
-                  <strong className="detail-section-title">Opportunity Metadata</strong>
+                  <strong className="detail-section-title">
+                    Opportunity Metadata
+                  </strong>
                   <div className="detail-meta-tags">
                     <span className="tag">Signal: {selected.signal_type}</span>
-                    <span className={`confidence ${selected.confidence_level?.toLowerCase().includes("high") ? "green" : "amber"}`}>
-                      {selected.confidence_level} ({formatConfidence(selected.confidence)})
+                    <span
+                      className={`confidence ${selected.confidence_level?.toLowerCase().includes("high") ? "green" : "amber"}`}
+                    >
+                      {selected.confidence_level} (
+                      {formatConfidence(selected.confidence)})
                     </span>
                     {selected.is_explicit_opportunity && (
-                      <span className="tag" style={{ background: "rgba(16, 185, 129, 0.12)", color: "var(--green)" }}>
+                      <span
+                        className="tag"
+                        style={{
+                          background: "rgba(16, 185, 129, 0.12)",
+                          color: "var(--green)",
+                        }}
+                      >
                         Direct Rec ✓
                       </span>
                     )}
-                    {selected.status && <span className="status-pill">{selected.status}</span>}
+                    {selected.status && (
+                      <span className="status-pill">{selected.status}</span>
+                    )}
                   </div>
-                  <div style={{ marginTop: 12, fontSize: "11px", color: "var(--muted)" }}>
-                    <span>Created: {new Date(selected.created_at).toLocaleDateString()}</span>
+                  <div
+                    style={{
+                      marginTop: 12,
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                    }}
+                  >
+                    <span>
+                      Created:{" "}
+                      {new Date(selected.created_at).toLocaleDateString()}
+                    </span>
                     {selected.updated_at && (
-                      <span style={{ marginLeft: 14 }}>Updated: {new Date(selected.updated_at).toLocaleDateString()}</span>
+                      <span style={{ marginLeft: 14 }}>
+                        Updated:{" "}
+                        {new Date(selected.updated_at).toLocaleDateString()}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -2722,7 +3678,9 @@ function OpportunitiesPage({
 
               {selected.requirements && selected.requirements.length > 0 && (
                 <div className="detail-list" style={{ marginTop: 18 }}>
-                  <strong className="detail-section-title">Creator Requirements</strong>
+                  <strong className="detail-section-title">
+                    Creator Requirements
+                  </strong>
                   <ul>
                     {selected.requirements.map((req, idx) => (
                       <li key={idx}>{req}</li>
@@ -2733,8 +3691,17 @@ function OpportunitiesPage({
 
               {selected.source_urls && selected.source_urls.length > 0 && (
                 <div style={{ marginTop: 18 }}>
-                  <strong className="detail-section-title">Sources & References</strong>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                  <strong className="detail-section-title">
+                    Sources & References
+                  </strong>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      marginTop: 8,
+                    }}
+                  >
                     {selected.source_urls.map((url, idx) => (
                       <a
                         key={idx}
@@ -2753,7 +3720,14 @@ function OpportunitiesPage({
                 </div>
               )}
 
-              <div style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <div
+                style={{
+                  marginTop: 24,
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                }}
+              >
                 <button
                   className="button secondary"
                   onClick={() => {
@@ -2775,7 +3749,9 @@ function OpportunitiesPage({
                   onClick={() => {
                     const item = selected;
                     if (!isOpportunityResearched(item)) {
-                      toast.info("Firstly research has to be performed, after that fit analysis will be done.");
+                      toast.info(
+                        "Firstly research has to be performed, after that fit analysis will be done.",
+                      );
                       return;
                     }
                     setSelected(null);
@@ -2830,7 +3806,9 @@ function ResearchPage({
 
   // Search, Filter & Pagination State
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "completed" | "in_progress">("all");
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "completed" | "in_progress"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchItems = () => {
@@ -2850,7 +3828,8 @@ function ResearchPage({
       })
       .catch((err) => {
         setLoading(false);
-        const msg = err instanceof Error ? err.message : "Unable to load research";
+        const msg =
+          err instanceof Error ? err.message : "Unable to load research";
         setErrorStr(msg);
         toastForError(toast, err, "Unable to load research");
       });
@@ -2877,7 +3856,8 @@ function ResearchPage({
     const matchesSearch =
       !searchQuery.trim() ||
       item.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.summary && item.summary.toLowerCase().includes(searchQuery.toLowerCase()));
+      (item.summary &&
+        item.summary.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
@@ -2992,7 +3972,9 @@ function ResearchPage({
                     <div>
                       <span className="kicker dark">Research details</span>
                       <p>
-                        {item.creator_partnership_signals.slice(0, 2).join(" ") ||
+                        {item.creator_partnership_signals
+                          .slice(0, 2)
+                          .join(" ") ||
                           "Creator activity and partnership signals."}
                       </p>
                     </div>
@@ -3010,8 +3992,8 @@ function ResearchPage({
             <div className="pagination-bar">
               <span className="pagination-info">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} -{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} records
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}{" "}
+                of {filteredItems.length} records
               </span>
               <div className="pagination-buttons">
                 <button
@@ -3027,7 +4009,9 @@ function ResearchPage({
                 <button
                   className="pagination-btn"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(p + 1, totalPages))
+                  }
                 >
                   Next →
                 </button>
@@ -3038,7 +4022,10 @@ function ResearchPage({
       )}
 
       {/* Side Drawer for Selected Research Report */}
-      <DetailDrawer isOpen={Boolean(selected)} onClose={() => setSelected(null)}>
+      <DetailDrawer
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+      >
         {selected && (
           <>
             <div className="drawer-header">
@@ -3047,7 +4034,9 @@ function ResearchPage({
                   {selected.company_name.slice(0, 1)}
                 </div>
                 <div>
-                  <span className="kicker dark">Brand Intelligence Research</span>
+                  <span className="kicker dark">
+                    Brand Intelligence Research
+                  </span>
                   <h3 style={{ margin: 0 }}>{selected.company_name}</h3>
                 </div>
               </div>
@@ -3055,7 +4044,11 @@ function ResearchPage({
                 {selected.company_url && (
                   <a
                     className="button secondary"
-                    style={{ textDecoration: "none", fontSize: "11px", padding: "6px 12px" }}
+                    style={{
+                      textDecoration: "none",
+                      fontSize: "11px",
+                      padding: "6px 12px",
+                    }}
                     href={selected.company_url}
                     target="_blank"
                     rel="noreferrer"
@@ -3073,7 +4066,10 @@ function ResearchPage({
                     setSelected(null);
                   }}
                 />
-                <button className="drawer-close-btn" onClick={() => setSelected(null)}>
+                <button
+                  className="drawer-close-btn"
+                  onClick={() => setSelected(null)}
+                >
                   Close ✕
                 </button>
               </div>
@@ -3081,33 +4077,74 @@ function ResearchPage({
 
             <div className="drawer-content">
               <div>
-                <strong className="detail-section-title">Executive Summary</strong>
-                <p className="detail-text">{selected.summary || "No summary available."}</p>
+                <strong className="detail-section-title">
+                  Executive Summary
+                </strong>
+                <p className="detail-text">
+                  {selected.summary || "No summary available."}
+                </p>
               </div>
 
               <div className="research-grid" style={{ marginTop: 18 }}>
                 <div>
-                  <DetailList label="Products & Offerings" items={selected.products} />
-                  <DetailList label="Target Markets" items={selected.target_markets} />
-                  <DetailList label="Target Customers / Audience" items={selected.target_customers} />
-                  <DetailList label="Recent News & Launches" items={selected.recent_activity} />
+                  <DetailList
+                    label="Products & Offerings"
+                    items={selected.products}
+                  />
+                  <DetailList
+                    label="Target Markets"
+                    items={selected.target_markets}
+                  />
+                  <DetailList
+                    label="Target Customers / Audience"
+                    items={selected.target_customers}
+                  />
+                  <DetailList
+                    label="Recent News & Launches"
+                    items={selected.recent_activity}
+                  />
                 </div>
                 <div>
-                  <DetailList label="Partnership Signals" items={selected.creator_partnership_signals} />
-                  <DetailList label="Partnership Requirements" items={selected.partnership_requirements} />
-                  <DetailList label="Timeliness / Why Now" items={selected.why_now} />
-                  <DetailList label="Risks or Unknowns" items={selected.risks_or_unknowns} />
+                  <DetailList
+                    label="Partnership Signals"
+                    items={selected.creator_partnership_signals}
+                  />
+                  <DetailList
+                    label="Partnership Requirements"
+                    items={selected.partnership_requirements}
+                  />
+                  <DetailList
+                    label="Timeliness / Why Now"
+                    items={selected.why_now}
+                  />
+                  <DetailList
+                    label="Risks or Unknowns"
+                    items={selected.risks_or_unknowns}
+                  />
                 </div>
               </div>
 
-              <div style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div
+                style={{
+                  marginTop: 24,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 12,
+                }}
+              >
                 <div style={{ fontSize: "11px", color: "var(--muted)" }}>
-                  <span>Status: <b className="status-pill">{selected.status}</b></span>
-                  <span style={{ marginLeft: 14 }}>
-                    Confidence: <strong>{formatConfidence(selected.confidence)}</strong>
+                  <span>
+                    Status: <b className="status-pill">{selected.status}</b>
                   </span>
                   <span style={{ marginLeft: 14 }}>
-                    Updated: {new Date(selected.updated_at).toLocaleDateString()}
+                    Confidence:{" "}
+                    <strong>{formatConfidence(selected.confidence)}</strong>
+                  </span>
+                  <span style={{ marginLeft: 14 }}>
+                    Updated:{" "}
+                    {new Date(selected.updated_at).toLocaleDateString()}
                   </span>
                 </div>
                 <button
@@ -3147,7 +4184,9 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
 
   // Search, Filter & Pagination State
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "high" | "moderate">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "high" | "moderate">(
+    "all",
+  );
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchItems = () => {
@@ -3167,7 +4206,8 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
       })
       .catch((err) => {
         setLoading(false);
-        const msg = err instanceof Error ? err.message : "Unable to load fit analyses";
+        const msg =
+          err instanceof Error ? err.message : "Unable to load fit analyses";
         setErrorStr(msg);
         toastForError(toast, err, "Unable to load fit analyses");
       });
@@ -3330,8 +4370,8 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
             <div className="pagination-bar">
               <span className="pagination-info">
                 Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} -{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)} of{" "}
-                {filteredItems.length} records
+                {Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}{" "}
+                of {filteredItems.length} records
               </span>
               <div className="pagination-buttons">
                 <button
@@ -3347,7 +4387,9 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
                 <button
                   className="pagination-btn"
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(p + 1, totalPages))
+                  }
                 >
                   Next →
                 </button>
@@ -3358,17 +4400,30 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
       )}
 
       {/* Side Drawer for Selected Fit Detail */}
-      <DetailDrawer isOpen={Boolean(selected)} onClose={() => setSelected(null)}>
+      <DetailDrawer
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+      >
         {selected && (
           <>
             <div className="drawer-header">
               <div className="drawer-title-area">
-                <div className="fit-score" style={{ width: 64, height: 64, fontSize: 20, borderWidth: 4 }}>
+                <div
+                  className="fit-score"
+                  style={{
+                    width: 64,
+                    height: 64,
+                    fontSize: 20,
+                    borderWidth: 4,
+                  }}
+                >
                   {Math.round(selected.overall_score)}
                 </div>
                 <div>
                   <span className="kicker dark">{selected.recommendation}</span>
-                  <h3 style={{ margin: 0 }}>{selected.company_name} Compatibility</h3>
+                  <h3 style={{ margin: 0 }}>
+                    {selected.company_name} Compatibility
+                  </h3>
                 </div>
               </div>
               <div className="drawer-actions">
@@ -3382,7 +4437,10 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
                     setSelected(null);
                   }}
                 />
-                <button className="drawer-close-btn" onClick={() => setSelected(null)}>
+                <button
+                  className="drawer-close-btn"
+                  onClick={() => setSelected(null)}
+                >
                   Close ✕
                 </button>
               </div>
@@ -3390,7 +4448,9 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
 
             <div className="drawer-content">
               <div>
-                <strong className="detail-section-title">Fit Breakdown Scores</strong>
+                <strong className="detail-section-title">
+                  Fit Breakdown Scores
+                </strong>
                 <div className="fit-bars" style={{ marginTop: 10 }}>
                   <span>
                     Audience Fit ({Math.round(selected.audience_fit)}%)
@@ -3416,23 +4476,47 @@ function FitPage({ targetCompany }: { targetCompany?: string | null }) {
               </div>
 
               <div style={{ marginTop: 20 }}>
-                <strong className="detail-section-title">AI Compatibility Rationale</strong>
+                <strong className="detail-section-title">
+                  AI Compatibility Rationale
+                </strong>
                 <p className="detail-text">{selected.reasoning}</p>
               </div>
 
               <div className="two-column" style={{ marginTop: 18 }}>
                 <div className="panel" style={{ padding: 16 }}>
-                  <strong className="detail-section-title" style={{ color: "var(--green)" }}>✓ Key Strengths</strong>
+                  <strong
+                    className="detail-section-title"
+                    style={{ color: "var(--green)" }}
+                  >
+                    ✓ Key Strengths
+                  </strong>
                   <DetailList label="" items={selected.strengths} />
                 </div>
                 <div className="panel" style={{ padding: 16 }}>
-                  <strong className="detail-section-title" style={{ color: "var(--amber)" }}>⚠ Potential Concerns</strong>
+                  <strong
+                    className="detail-section-title"
+                    style={{ color: "var(--amber)" }}
+                  >
+                    ⚠ Potential Concerns
+                  </strong>
                   <DetailList label="" items={selected.concerns} />
                 </div>
               </div>
 
-              <div style={{ marginTop: 20, fontSize: "11px", color: "var(--muted)", textAlign: "right" }}>
-                <span>Evaluated: {new Date(selected.updated_at || selected.created_at).toLocaleDateString()}</span>
+              <div
+                style={{
+                  marginTop: 20,
+                  fontSize: "11px",
+                  color: "var(--muted)",
+                  textAlign: "right",
+                }}
+              >
+                <span>
+                  Evaluated:{" "}
+                  {new Date(
+                    selected.updated_at || selected.created_at,
+                  ).toLocaleDateString()}
+                </span>
               </div>
             </div>
           </>
@@ -3471,7 +4555,9 @@ function ChatPage({
   const toast = useToast();
   const [session, setSession] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionTitles, setSessionTitles] = useState<Record<string, string>>({});
+  const [sessionTitles, setSessionTitles] = useState<Record<string, string>>(
+    {},
+  );
   const [input, setInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -3504,7 +4590,9 @@ function ChatPage({
   // Listen for busy-warning event dispatched from app level (cross-page guard)
   useEffect(() => {
     const handler = () => {
-      toast.warning("A request is already in progress. Please wait for it to complete before starting another.");
+      toast.warning(
+        "A request is already in progress. Please wait for it to complete before starting another.",
+      );
     };
     window.addEventListener("dealpilot:busy-warning", handler);
     return () => window.removeEventListener("dealpilot:busy-warning", handler);
@@ -3524,7 +4612,9 @@ function ChatPage({
     if (!pendingAction) return;
     // Use busyRef to avoid stale closure
     if (busyRef.current) {
-      toast.warning("A request is already in progress. Please wait for it to complete before starting another.");
+      toast.warning(
+        "A request is already in progress. Please wait for it to complete before starting another.",
+      );
       onClearPendingAction?.();
       return;
     }
@@ -3535,9 +4625,10 @@ function ChatPage({
       setIsBusy(true);
       // Clear old messages and show typing indicator immediately
       setMessages([]);
-      const actionLabel = action.type === "research"
-        ? `Researching ${action.companyName}…`
-        : `Evaluating fit for ${action.companyName}…`;
+      const actionLabel =
+        action.type === "research"
+          ? `Researching ${action.companyName}…`
+          : `Evaluating fit for ${action.companyName}…`;
       setStatusLabel(actionLabel);
 
       try {
@@ -3555,18 +4646,27 @@ function ChatPage({
             : `Evaluate fit for brand: ${action.companyName}`;
 
         setMessages([
-          { role: "user", content: userPrompt, created_at: new Date().toISOString() },
+          {
+            role: "user",
+            content: userPrompt,
+            created_at: new Date().toISOString(),
+          },
         ]);
 
-        await request(`/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`, {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({ role: "user", content: userPrompt }),
-        }).catch(() => {});
+        await request(
+          `/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`,
+          {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ role: "user", content: userPrompt }),
+          },
+        ).catch(() => {});
 
         let assistantContent = "";
         if (action.type === "research" && action.opportunityId) {
-          setStatusLabel(`Researching ${action.companyName} — gathering brand signals…`);
+          setStatusLabel(
+            `Researching ${action.companyName} — gathering brand signals…`,
+          );
           const res = await request<Research>(
             `/agent/opportunities/${action.opportunityId}/research?session_id=${encodeURIComponent(activeSessionId)}`,
             { method: "POST", headers: authHeaders() },
@@ -3611,13 +4711,23 @@ function ChatPage({
           await new Promise((resolve) => setTimeout(resolve, 1000));
           setMessages((current) => [
             ...current,
-            { role: "assistant", content: assistantContent, created_at: new Date().toISOString() },
+            {
+              role: "assistant",
+              content: assistantContent,
+              created_at: new Date().toISOString(),
+            },
           ]);
-          await request(`/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`, {
-            method: "POST",
-            headers: authHeaders(),
-            body: JSON.stringify({ role: "assistant", content: assistantContent }),
-          }).catch(() => {});
+          await request(
+            `/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`,
+            {
+              method: "POST",
+              headers: authHeaders(),
+              body: JSON.stringify({
+                role: "assistant",
+                content: assistantContent,
+              }),
+            },
+          ).catch(() => {});
           setSessionTitles((prev) => ({
             ...prev,
             [activeSessionId]: userPrompt,
@@ -3625,7 +4735,11 @@ function ChatPage({
           onRefresh();
         }
       } catch (err) {
-        toastForError(toast, err, `${action.type === "research" ? "Research" : "Fit evaluation"} failed`);
+        toastForError(
+          toast,
+          err,
+          `${action.type === "research" ? "Research" : "Fit evaluation"} failed`,
+        );
       } finally {
         setIsFinishedThinking(false);
         setIsBusy(false);
@@ -3730,7 +4844,9 @@ function ChatPage({
 
   const select = (id: string) => {
     if (busyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning(
+        "A research or fit evaluation is currently in progress. Please wait for it to complete.",
+      );
       return;
     }
     localStorage.setItem(storage.session, id);
@@ -3741,7 +4857,9 @@ function ChatPage({
 
   const newChat = () => {
     if (busyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning(
+        "A research or fit evaluation is currently in progress. Please wait for it to complete.",
+      );
       return;
     }
     localStorage.removeItem(storage.session);
@@ -3769,7 +4887,9 @@ function ChatPage({
 
   const send = async (value: string) => {
     if (busyRef.current) {
-      toast.warning("A request is already in progress. Please wait for it to complete before starting another.");
+      toast.warning(
+        "A request is already in progress. Please wait for it to complete before starting another.",
+      );
       return;
     }
     const message = value.trim();
@@ -3875,7 +4995,9 @@ function ChatPage({
           onClick={() => setMobileRecentsOpen(false)}
         />
       )}
-      <aside className={`chat-recents-sidebar ${mobileRecentsOpen ? "mobile-open" : ""}`}>
+      <aside
+        className={`chat-recents-sidebar ${mobileRecentsOpen ? "mobile-open" : ""}`}
+      >
         <div className="recents-top-actions">
           <div className="recents-header-mobile">
             <span>Recent Chats</span>
@@ -3943,7 +5065,10 @@ function ChatPage({
                 >
                   <span className="chat-icon">💬</span>
                   <div className="chat-info">
-                    <span className="chat-title" title={rawTitle || "Chat session"}>
+                    <span
+                      className="chat-title"
+                      title={rawTitle || "Chat session"}
+                    >
                       {titleSnippet}
                     </span>
                     <span className="chat-date">{formattedDate}</span>
@@ -3985,8 +5110,8 @@ function ChatPage({
               <span className="kicker dark">Your deal desk</span>
               <h1>What should we explore next?</h1>
               <p>
-                Ask about sponsors, brands, creator campaigns, affiliate programs,
-                or partnership fit.
+                Ask about sponsors, brands, creator campaigns, affiliate
+                programs, or partnership fit.
               </p>
               <div className="suggestion-chips">
                 {SUGGESTIONS.map((s) => (
@@ -4058,13 +5183,21 @@ function ChatPage({
                   </article>
                 );
               })}
-              {busy && <TypingIndicator statusLabel={statusLabel} isFinished={isFinishedThinking} />}
+              {busy && (
+                <TypingIndicator
+                  statusLabel={statusLabel}
+                  isFinished={isFinishedThinking}
+                />
+              )}
             </>
           )}
           {/* Show typing indicator even when no messages yet (pending action started) */}
           {busy && messages.length === 0 && (
             <div style={{ padding: "0 24px" }}>
-              <TypingIndicator statusLabel={statusLabel} isFinished={isFinishedThinking} />
+              <TypingIndicator
+                statusLabel={statusLabel}
+                isFinished={isFinishedThinking}
+              />
             </div>
           )}
         </div>
@@ -4118,7 +5251,9 @@ function SettingsPage({ user }: { user: User }) {
             </div>
             <div>
               <div className="settings-user-name">@{user.username}</div>
-              <div className="settings-user-role">DealPilot Creator Workspace</div>
+              <div className="settings-user-role">
+                DealPilot Creator Workspace
+              </div>
             </div>
           </div>
           <div className="settings-form">
@@ -4128,7 +5263,10 @@ function SettingsPage({ user }: { user: User }) {
             </label>
             <label>
               Email address
-              <input disabled value={user.email || "No email linked (Local Workspace)"} />
+              <input
+                disabled
+                value={user.email || "No email linked (Local Workspace)"}
+              />
             </label>
             <label>
               Account status
@@ -4149,11 +5287,17 @@ function SettingsPage({ user }: { user: User }) {
             </label>
             <label>
               Intelligence Engine
-              <input disabled value="DealPilot Multi-Agent (Director + Opportunity + Research + Fit)" />
+              <input
+                disabled
+                value="DealPilot Multi-Agent (Director + Opportunity + Research + Fit)"
+              />
             </label>
             <label>
               Signal Source
-              <input disabled value="Live Commercial Radar & Creator Direct Programs" />
+              <input
+                disabled
+                value="Live Commercial Radar & Creator Direct Programs"
+              />
             </label>
           </div>
           <div className="settings-actions">
@@ -4280,7 +5424,18 @@ function AppShell({
       return "profile";
     }
     const saved = localStorage.getItem(storage.page) as Page | null;
-    if (saved && ["overview", "opportunities", "research", "fit", "conversations", "profile", "settings"].includes(saved)) {
+    if (
+      saved &&
+      [
+        "overview",
+        "opportunities",
+        "research",
+        "fit",
+        "conversations",
+        "profile",
+        "settings",
+      ].includes(saved)
+    ) {
       return saved;
     }
     return "conversations";
@@ -4302,23 +5457,27 @@ function AppShell({
   }, [profile]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [targetResearchCompany, setTargetResearchCompany] = useState<string | null>(null);
+  const [targetResearchCompany, setTargetResearchCompany] = useState<
+    string | null
+  >(null);
   const [targetFitCompany, setTargetFitCompany] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [pendingChatAction, setPendingChatAction] = useState<PendingChatAction>(null);
+  const [pendingChatAction, setPendingChatAction] =
+    useState<PendingChatAction>(null);
   // App-level ref to track if a chat action is currently being processed
   // This prevents double-clicks or cross-page concurrent action initiations
   const globalBusyRef = useRef(false);
 
   const handleStartChatAction = (action: PendingChatAction) => {
     if (globalBusyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning(
+        "A research or fit evaluation is currently in progress. Please wait for it to complete.",
+      );
       return;
     }
     setPendingChatAction(action);
     setPage("conversations");
   };
-
 
   const navItems: { id: Page; label: string; icon: string }[] = [
     { id: "overview", label: "Overview", icon: "⌂" },
@@ -4381,8 +5540,7 @@ function AppShell({
         onStartChatAction={handleStartChatAction}
       />
     );
-  if (page === "fit")
-    content = <FitPage targetCompany={targetFitCompany} />;
+  if (page === "fit") content = <FitPage targetCompany={targetFitCompany} />;
   if (page === "conversations")
     content = (
       <ChatPage
@@ -4443,7 +5601,6 @@ function AppShell({
             </button>
           </div>
         </header>
-
 
         {mobileNavOpen && (
           <div
@@ -4547,7 +5704,7 @@ export default function App() {
   }, [theme]);
 
   const [user, setUser] = useState<User | null>(null);
-    const [showAuth, setShowAuth] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [loading, setLoading] = useState(true);
 
@@ -4595,8 +5752,7 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  if (loading)
-    return <div className="loading-screen">Loading DealPilot…</div>;
+  if (loading) return <div className="loading-screen">Loading DealPilot…</div>;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

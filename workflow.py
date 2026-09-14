@@ -208,32 +208,35 @@ class DealPilotWorkflow:
             )
 
         target_session_id = session_id or (existing_research["session_id"] if existing_research else await self.create_session(user_id))
-        runner_session_id = await self.create_session(user_id)
-        try:
-            response = await self.run_message(
+        ##runner_session_id = await self.create_session(user_id)
+        
+        response = await self.run_message(
                 user_id,
-                runner_session_id,
-                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}.",
+                target_session_id,
+                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. "
+                f"Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. "
+                f"Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}. "
+                f"Known source URLs already found during opportunity discovery — use these as a starting point instead of "
+                f"resolving the company from scratch: {', '.join(opportunity.get('source_urls') or []) or 'none available'}.",
                 opportunity_id=opportunity_id,
                 persist_session_id=target_session_id,
             )
-            research = next(
+        research = next(
                 (item for item in list_brand_research(user_id) if item.get("opportunity_id") == opportunity_id),
                 None,
             )
-            if research is None:
-                if response:
-                    return save_brand_research_job(
+        if research is None:
+            if response:
+                return save_brand_research_job(
                         username=user_id,
                         session_id=target_session_id,
                         company_name=opportunity["company_name"],
                         company_url=opportunity.get("company_url"),
                         opportunity_id=opportunity_id,
                     )
-                raise WorkflowActionPending("Brand research is still in progress. Try again when it completes.")
-            return research["id"]
-        finally:
-            self.delete_session(user_id, runner_session_id)
+            raise WorkflowActionPending("Brand research is still in progress. Try again when it completes.")
+        return research["id"]
+       
 
     async def evaluate_opportunity_fit(
         self,
@@ -283,25 +286,24 @@ class DealPilotWorkflow:
             return existing_fit["id"]
 
         target_session_id = session_id or await self.create_session(user_id)
-        runner_session_id = await self.create_session(user_id)
-        try:
-            await self.run_message(
+        ##runner_session_id = await self.create_session(user_id)
+        
+        await self.run_message(
                 user_id,
-                runner_session_id,
+                target_session_id,
                 f"Evaluate creator-brand fit using the fit_agent for this opportunity. Reuse this completed brand research and do not browse or research another company. Company: {opportunity['company_name']}. Opportunity ID: {opportunity_id}. Research ID: {research['id']}. Research JSON: {json.dumps(research)}. Return and persist the structured fit result.",
                 opportunity_id=opportunity_id,
                 research_id=research["id"],
                 persist_session_id=target_session_id,
             )
-            fit = next(
+        fit = next(
                 (item for item in list_fit_results(user_id) if item.get("opportunity_id") == opportunity_id and item.get("research_id") == research["id"]),
                 None,
             )
-            if fit is None:
-                raise RuntimeError("Fit evaluation did not return a structured result")
-            return fit["id"]
-        finally:
-            self.delete_session(user_id, runner_session_id)
+        if fit is None:
+            raise RuntimeError("Fit evaluation did not return a structured result")
+        return fit["id"]
+     
 
     async def run_message(
         self,
