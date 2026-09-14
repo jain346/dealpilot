@@ -213,7 +213,7 @@ class DealPilotWorkflow:
             response = await self.run_message(
                 user_id,
                 runner_session_id,
-                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}.",
+                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}.Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}. Known source URLs already found during opportunity discovery — use these as a starting point instead of resolving the company from scratch: {', '.join(opportunity.get('source_urls') or []) or 'none available'}.",
                 opportunity_id=opportunity_id,
                 persist_session_id=target_session_id,
             )
