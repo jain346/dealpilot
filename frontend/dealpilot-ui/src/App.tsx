@@ -1141,6 +1141,63 @@ function parseOpportunityJson(text: string): {
   return { cleanedText: result.trim(), opportunities };
 }
 
+function isInternalWorkflowMessage(content: string): boolean {
+  return /^(?:Research this specific opportunity using the brand_research_agent|Evaluate creator-brand fit using the fit_agent)/i.test(
+    content.trim(),
+  );
+}
+
+function extractLeadingJsonObject(content: string): unknown | null {
+  const text = content.trim();
+  if (!text.startsWith("{")) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') inString = true;
+    else if (character === "{") depth += 1;
+    else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(0, index + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function readableStructuredResult(content: string): string {
+  const value = extractLeadingJsonObject(content);
+  if (!value || typeof value !== "object" || !("overall_score" in value)) {
+    return content;
+  }
+
+  const result = value as Record<string, unknown>;
+  const list = (key: string) =>
+    Array.isArray(result[key]) ? (result[key] as unknown[]).join(", ") : "N/A";
+  const score = Number(result.overall_score);
+  return (
+    `### ◒ Creator-Brand Fit Evaluation${result.company_name ? `: ${result.company_name}` : ""}\n\n` +
+    `**Overall Fit Score:** ${Number.isFinite(score) ? Math.round(score) : "N/A"}%\n\n` +
+    `**Recommendation:** ${result.recommendation || "N/A"}\n\n` +
+    `**Reasoning:** ${result.reasoning || "N/A"}\n\n` +
+    `**Key Strengths:** ${list("strengths")}\n\n` +
+    `**Concerns:** ${list("concerns")}`
+  );
+}
+
 function parseAssistantMessage(content: string) {
   let think = "";
   let body = content;
@@ -1425,12 +1482,13 @@ function AssistantMessage({
   createdAt?: string;
   onNavigate?: (page: Page, company?: string) => void;
 }) {
+  const readableContent = readableStructuredResult(content);
   const { think, body, opportunities, sources } =
-    parseAssistantMessage(content);
+    parseAssistantMessage(readableContent);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(body || content);
+    void navigator.clipboard.writeText(body || readableContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -2514,9 +2572,14 @@ function ProfilePage({
 
   return (
     <PageFrame
-      eyebrow="Your signal source"
-      title="Creator profile"
-      subtitle="This profile persists across every conversation and shapes opportunity relevance."
+      className={!ready ? "profile-onboarding-frame" : undefined}
+      eyebrow={ready ? "Your signal source" : "Personalize your workspace"}
+      title={ready ? "Creator profile" : "Build your creator profile"}
+      subtitle={
+        ready
+          ? "This profile persists across every conversation and shapes opportunity relevance."
+          : "A few thoughtful details help DealPilot find partnerships that actually fit your work."
+      }
     >
       {ready && (
         <div className="profile-complete-banner">
@@ -2584,7 +2647,7 @@ function ProfilePage({
             )}
           </section>
         ) : (
-          <section className="panel">
+          <section className={ready ? "panel" : "profile-onboarding-panel"}>
             <div className="panel-heading">
               <div>
                 <span className="kicker">
@@ -2617,15 +2680,17 @@ function PageFrame({
   eyebrow,
   title,
   subtitle,
+  className,
   children,
 }: {
   eyebrow: string;
   title: string;
   subtitle: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="page-content">
+    <div className={`page-content${className ? ` ${className}` : ""}`}>
       <span className="kicker dark">{eyebrow}</span>
       <h1 className="page-title">{title}</h1>
       <p className="page-subtitle">{subtitle}</p>
@@ -4553,7 +4618,9 @@ function ChatPage({
   globalBusyRef?: React.MutableRefObject<boolean>;
 }) {
   const toast = useToast();
-  const [session, setSession] = useState<string | null>(null);
+  const [session, setSession] = useState<string | null>(() =>
+    localStorage.getItem(storage.session),
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitles, setSessionTitles] = useState<Record<string, string>>(
     {},
@@ -4632,11 +4699,26 @@ function ChatPage({
       setStatusLabel(actionLabel);
 
       try {
-        const created = await request<{ session_id: string }>(
-          "/agent/sessions",
-          { method: "POST", headers: authHeaders() },
-        );
-        const activeSessionId = created.session_id;
+        let activeSessionId = session || localStorage.getItem(storage.session);
+        if (activeSessionId) {
+          try {
+            const existingMessages = await request<Message[]>(
+              `/agent/sessions/${encodeURIComponent(activeSessionId)}/messages`,
+              { headers: authHeaders() },
+            );
+            setMessages(existingMessages);
+          } catch {
+            localStorage.removeItem(storage.session);
+            activeSessionId = null;
+          }
+        }
+        if (!activeSessionId) {
+          const created = await request<{ session_id: string }>(
+            "/agent/sessions",
+            { method: "POST", headers: authHeaders() },
+          );
+          activeSessionId = created.session_id;
+        }
         setSession(activeSessionId);
         localStorage.setItem(storage.session, activeSessionId);
 
@@ -4645,22 +4727,14 @@ function ChatPage({
             ? `Research brand: ${action.companyName}`
             : `Evaluate fit for brand: ${action.companyName}`;
 
-        setMessages([
+        setMessages((current) => [
+          ...current,
           {
             role: "user",
             content: userPrompt,
             created_at: new Date().toISOString(),
           },
         ]);
-
-        await request(
-          `/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`,
-          {
-            method: "POST",
-            headers: authHeaders(),
-            body: JSON.stringify({ role: "user", content: userPrompt }),
-          },
-        ).catch(() => {});
 
         let assistantContent = "";
         if (action.type === "research" && action.opportunityId) {
@@ -5128,6 +5202,12 @@ function ChatPage({
           ) : (
             <>
               {messages.map((message, index) => {
+                if (
+                  message.role === "user" &&
+                  isInternalWorkflowMessage(message.content)
+                ) {
+                  return null;
+                }
                 const isError =
                   message.role === "assistant" &&
                   message.content.startsWith("__ERROR__");
@@ -5440,14 +5520,30 @@ function AppShell({
     }
     return "conversations";
   });
+  const [profileSetupComplete, setProfileSetupComplete] = useState(() =>
+    isProfileComplete(profile),
+  );
+  const onboarding = !profileSetupComplete;
 
   const setPage = (newPage: Page) => {
+    const profileWasSaved =
+      localStorage.getItem("dealpilot:profile_completed") === "true";
+    if (onboarding && newPage !== "profile" && !profileWasSaved) {
+      setPageState("profile");
+      return;
+    }
     localStorage.setItem(storage.page, newPage);
     setPageState(newPage);
   };
 
   // Direct new users to profile page upon initial load
   useEffect(() => {
+    if (
+      isProfileComplete(profile) &&
+      localStorage.getItem("dealpilot:profile_completed") === "true"
+    ) {
+      setProfileSetupComplete(true);
+    }
     if (!isProfileComplete(profile)) {
       const hasCompleted = localStorage.getItem("dealpilot:profile_completed");
       if (!hasCompleted) {
@@ -5563,46 +5659,54 @@ function AppShell({
   if (page === "settings") content = <SettingsPage user={user} />;
 
   return (
-    <div className="product-shell">
-      <Sidebar
-        page={page}
-        setPage={setPage}
-        user={user}
-        profile={profile}
-        onLogout={onLogout}
-        onProfile={() => setPage("profile")}
-      />
+    <div className={`product-shell${onboarding ? " onboarding-shell" : ""}`}>
+      {!onboarding && (
+        <Sidebar
+          page={page}
+          setPage={setPage}
+          user={user}
+          profile={profile}
+          onLogout={onLogout}
+          onProfile={() => setPage("profile")}
+        />
+      )}
       <main className="product-main">
         <header className="topbar">
           <div className="topbar-left">
-            <button
-              className="mobile-nav-toggle icon-button"
-              onClick={() => setMobileNavOpen(true)}
-              aria-label="Open menu"
-            >
-              ☰
-            </button>
+            {!onboarding && (
+              <button
+                className="mobile-nav-toggle icon-button"
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Open menu"
+              >
+                ☰
+              </button>
+            )}
             <div className="topbar-title">
               <span className="status-dot" />
-              <span className="topbar-brand-label">DealPilot workspace</span>
+              <span className="topbar-brand-label">
+                {onboarding ? "Set up your DealPilot profile" : "DealPilot workspace"}
+              </span>
             </div>
           </div>
           <div className="topbar-actions">
             <ThemeToggle />
-            <button
-              className="top-avatar"
-              onClick={() => setPage("profile")}
-              aria-label="Creator profile"
-              title="Creator profile"
-            >
-              {(profile.creator_name || user.username)
-                .slice(0, 1)
-                .toUpperCase()}
-            </button>
+            {!onboarding && (
+              <button
+                className="top-avatar"
+                onClick={() => setPage("profile")}
+                aria-label="Creator profile"
+                title="Creator profile"
+              >
+                {(profile.creator_name || user.username)
+                  .slice(0, 1)
+                  .toUpperCase()}
+              </button>
+            )}
           </div>
         </header>
 
-        {mobileNavOpen && (
+        {!onboarding && mobileNavOpen && (
           <div
             className="mobile-nav-backdrop"
             onClick={() => setMobileNavOpen(false)}

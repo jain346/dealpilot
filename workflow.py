@@ -220,6 +220,7 @@ class DealPilotWorkflow:
                 f"resolving the company from scratch: {', '.join(opportunity.get('source_urls') or []) or 'none available'}.",
                 opportunity_id=opportunity_id,
                 persist_session_id=target_session_id,
+                conversation_message=f"Research brand: {opportunity['company_name']}",
             )
         research = next(
                 (item for item in list_brand_research(user_id) if item.get("opportunity_id") == opportunity_id),
@@ -295,6 +296,7 @@ class DealPilotWorkflow:
                 opportunity_id=opportunity_id,
                 research_id=research["id"],
                 persist_session_id=target_session_id,
+                conversation_message=f"Evaluate fit for brand: {opportunity['company_name']}",
             )
         fit = next(
                 (item for item in list_fit_results(user_id) if item.get("opportunity_id") == opportunity_id and item.get("research_id") == research["id"]),
@@ -313,6 +315,7 @@ class DealPilotWorkflow:
         opportunity_id: int | None = None,
         research_id: int | None = None,
         persist_session_id: str | None = None,
+        conversation_message: str | None = None,
     ) -> str:
         """Run the Director workflow and persist specialist outputs."""
 
@@ -397,7 +400,7 @@ class DealPilotWorkflow:
             add_message(
                 session_id,
                 "user",
-                message,
+                conversation_message or message,
             )
 
             responses: list[str] = []
