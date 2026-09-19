@@ -1,5 +1,6 @@
 import os
 from google.adk.agents.llm_agent import Agent
+from google.genai import types
 from pydantic import BaseModel, Field
 
 from .parallel_tools_brand import get_parallel_task_mcp_tools
@@ -232,5 +233,9 @@ root_agent = Agent(
     input_schema=BrandResearchInput,
     output_schema=BrandResearchOutput,
     output_key="last_brand_research_output",
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        temperature=0.2,
+    ),
     tools=[get_parallel_task_mcp_tools()],
 )
