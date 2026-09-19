@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).with_name(".env"))
 
 from google.adk.agents.llm_agent import Agent
+from google.genai import types
 
 from opportunity_agent.agent import root_agent as opportunity_agent
 from brand_research_agent.agent import root_agent as brand_research_agent
@@ -149,6 +150,7 @@ The profile has this structure:
 * `platforms`
 * `region`
 * `languages`
+* `audience`
 * `audience_description`
 * `audience_size`
 * `average_views`
@@ -178,6 +180,7 @@ Optional profile information includes:
 
 * `creator_name`
 * `languages`
+* `audience`
 * `audience_description`
 * `average_views`
 * `engagement_rate`
@@ -278,7 +281,7 @@ Do not force every request through opportunity discovery.
    * strong confidence;
    * explicit creator / partnership evidence where available.
 
-6. Return a concise set of the strongest opportunities.
+6. Present the full set of discovered commercial opportunities (all vetted opportunities returned by opportunity_agent) so the creator has a comprehensive set of options.
 
 
 Do not automatically deep-research every discovered company.
@@ -323,11 +326,11 @@ Use this sequence:
 1. Validate the creator profile.
 2. Call `opportunity_agent`.
 3. Review the discovered opportunities.
-4. Select the most promising candidates.
+4. Select the 1–2 most promising candidates (strictly cap at 1–2 to maintain fast, focused response latency).
 5. Prefer HIGH-confidence opportunities and explicit opportunities.
 6. Call `brand_research_agent` for the selected companies.
 7. Call `fit_agent` for the researched companies.
-8. Rank the resulting opportunities.
+8. Rank the resulting opportunities with clear evidence and fit rationales.
 
 The purpose is not to maximize the number of companies.
 
@@ -657,4 +660,8 @@ root_agent = Agent(
     tools=[
         save_creator_profile,
     ],
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        temperature=0.3,
+    ),
 )

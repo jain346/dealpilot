@@ -11,7 +11,38 @@ import os
 from pathlib import Path
 from logging_config import logger
 
-GCS_BUCKET_NAME = os.environ.get("DEALPILOT_GCS_BUCKET", "").strip()
+def _get_sanitized_bucket_name() -> str:
+    raw = os.environ.get("DEALPILOT_GCS_BUCKET", "").strip()
+    if not raw:
+        return ""
+    # Strip wrapping quotes if passed in env strings
+    name = raw.strip("'\"").strip()
+    # Strip gs:// prefix if provided
+    if name.startswith("gs://"):
+        name = name[5:]
+    # Strip trailing slashes
+    name = name.rstrip("/")
+
+    # Common deployment pitfall: ${PROJECT_ID}-dealpilot-data where PROJECT_ID was unset in shell -> "-dealpilot-data"
+    if name.startswith("-"):
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip() or os.environ.get("GCP_PROJECT", "").strip()
+        if project:
+            name = f"{project}{name}"
+            logger.info(f"[GCS Persistence] Pre-pended GCP project ID to bucket name: resolved to '{name}'")
+
+    return name
+
+
+def _is_valid_bucket_name(name: str) -> bool:
+    if not name or len(name) < 3 or len(name) > 222:
+        return False
+    # Bucket names must start and end with a number or letter
+    if not (name[0].isalnum() and name[-1].isalnum()):
+        return False
+    return True
+
+
+GCS_BUCKET_NAME = _get_sanitized_bucket_name()
 _last_synced_mtime = 0.0
 _sync_lock = asyncio.Lock()
 
@@ -19,6 +50,13 @@ _sync_lock = asyncio.Lock()
 def download_db_from_gcs(db_path: Path) -> bool:
     """Download the persistent database from GCS bucket on startup."""
     if not GCS_BUCKET_NAME:
+        return False
+
+    if not _is_valid_bucket_name(GCS_BUCKET_NAME):
+        logger.warning(
+            f"[GCS Persistence] Invalid bucket name '{GCS_BUCKET_NAME}'. "
+            "Bucket names must start and end with a letter or number. Skipping GCS download."
+        )
         return False
 
     try:
@@ -43,7 +81,7 @@ def download_db_from_gcs(db_path: Path) -> bool:
                 f"[GCS Persistence] No database found in gs://{GCS_BUCKET_NAME}/dealpilot.db. Starting with fresh/local database."
             )
     except Exception as e:
-        logger.warning(f"[GCS Persistence] Could not download database from GCS: {e}")
+        logger.warning(f"[GCS Persistence] Could not download database from GCS bucket '{GCS_BUCKET_NAME}': {e}")
 
     return False
 
@@ -51,6 +89,13 @@ def download_db_from_gcs(db_path: Path) -> bool:
 def upload_db_to_gcs(db_path: Path, force: bool = False) -> bool:
     """Upload the local SQLite database to GCS bucket if it has been modified."""
     if not GCS_BUCKET_NAME or not db_path.exists():
+        return False
+
+    if not _is_valid_bucket_name(GCS_BUCKET_NAME):
+        logger.warning(
+            f"[GCS Persistence] Invalid bucket name '{GCS_BUCKET_NAME}'. "
+            "Bucket names must start and end with a letter or number. Skipping GCS upload."
+        )
         return False
 
     global _last_synced_mtime
@@ -69,13 +114,19 @@ def upload_db_to_gcs(db_path: Path, force: bool = False) -> bool:
         logger.info(f"[GCS Persistence] Database state synced to gs://{GCS_BUCKET_NAME}/dealpilot.db")
         return True
     except Exception as e:
-        logger.warning(f"[GCS Persistence] Failed to upload database to GCS: {e}")
+        logger.warning(f"[GCS Persistence] Failed to upload database to GCS bucket '{GCS_BUCKET_NAME}': {e}")
         return False
 
 
 async def start_gcs_sync_loop(db_path: Path, interval_seconds: int = 5):
     """Background async loop that monitors database file changes and uploads to GCS."""
     if not GCS_BUCKET_NAME:
+        return
+
+    if not _is_valid_bucket_name(GCS_BUCKET_NAME):
+        logger.warning(
+            f"[GCS Persistence] Background sync disabled: '{GCS_BUCKET_NAME}' is not a valid GCS bucket name."
+        )
         return
 
     logger.info(f"[GCS Persistence] Active sync loop watching {db_path} every {interval_seconds}s...")

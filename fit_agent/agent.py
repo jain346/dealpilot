@@ -2,6 +2,7 @@ import os
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
+from google.genai import types
 from pydantic import BaseModel, Field
 
 class CreatorProfile(BaseModel):
@@ -9,6 +10,7 @@ class CreatorProfile(BaseModel):
     platform: str
     audience_region: str
     audience_size: int = Field(description="Creator's audience/follower count.")
+    audience: list[str] = Field(default_factory=list, description="Target audience groups (e.g. Gen Z, Millennials, Students).")
     audience_description: str | None = None
     average_views: int | None = None
     engagement_rate: float | None = None
@@ -183,5 +185,9 @@ root_agent = Agent(
     output_schema=FitOutput,
     output_key="last_fit_output",
     instruction=FIT_AGENT_INSTRUCTION,
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        temperature=0.1,
+    ),
 )
 

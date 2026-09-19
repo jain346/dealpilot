@@ -20,6 +20,7 @@ type Profile = {
   platforms: string[];
   region: string | null;
   languages?: string[];
+  audience?: string[];
   audience_description?: string | null;
   audience_size: number | null;
   average_views: number | null;
@@ -137,6 +138,8 @@ const emptyProfile: Profile = {
   niche: "",
   platforms: [],
   region: "",
+  audience: [],
+  audience_description: "",
   audience_size: null,
   average_views: null,
   engagement_rate: null,
@@ -367,12 +370,21 @@ function isProfileComplete(p: Profile): boolean {
 }
 
 function profileForForm(profile: Profile): Profile {
+  const fallbackAudience = profile.audience_description
+    ?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1]
+    ?.split(", ")
+    .filter(Boolean) || [];
+
   return {
     ...profile,
     creator_name: profile.creator_name || "",
     niche: profile.niche || "",
     region: profile.region || "",
     platforms: profile.platforms || [],
+    audience:
+      profile.audience && profile.audience.length > 0
+        ? profile.audience
+        : fallbackAudience,
   };
 }
 
@@ -1678,31 +1690,88 @@ const profilePlatforms = ["YouTube", "Instagram", "TikTok", "Facebook", "X", "Tw
 const profileAudiences = ["General audience", "Gen Z", "Millennials", "Parents & families", "Business professionals", "Students", "Hobbyists & enthusiasts"];
 const profileLocations = ["United States", "Canada", "United Kingdom", "Australia", "India", "Germany", "France", "Brazil", "Mexico", "Singapore", "United Arab Emirates", "Other"];
 
-function ProfileForm({ profile, onChange, onNavigate }: { profile: Profile; onChange: (profile: Profile) => void; onNavigate?: (page: Page) => void }) {
+function ProfileForm({
+  profile,
+  onChange,
+  onNavigate,
+  onSaved,
+}: {
+  profile: Profile;
+  onChange: (profile: Profile) => void;
+  onNavigate?: (page: Page) => void;
+  onSaved?: () => void;
+}) {
   const toast = useToast();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1].split(", ").filter(Boolean) || [];
-  const [audienceTypes, setAudienceTypes] = useState(savedAudience);
+  const currentAudience = (profile.audience && profile.audience.length > 0)
+    ? profile.audience
+    : (profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1]?.split(", ").filter(Boolean) || []);
   const update = (changes: Partial<Profile>) => onChange({ ...profile, ...changes });
   const requiredComplete = Boolean(profile.niche?.trim() && profile.platforms.length && profile.region?.trim() && profile.audience_size && profile.audience_size > 0);
 
+  const toggleAudience = (option: string) => {
+    const next = currentAudience.includes(option)
+      ? currentAudience.filter((item) => item !== option)
+      : [...currentAudience, option];
+    update({
+      audience: next,
+      audience_description: next.length ? `Audience: ${next.join(", ")}` : null,
+    });
+  };
+
   const canContinue = () => {
     if (step === 0) return Boolean(profile.niche);
-    if (step === 1) return Boolean(audienceTypes.length && profile.audience_size && profile.audience_size > 0);
+    if (step === 1) return Boolean(currentAudience.length && profile.audience_size && profile.audience_size > 0);
     if (step === 2) return profile.platforms.length > 0;
     if (step === 3) return Boolean(profile.region);
     return true;
   };
 
+  const advanceStep = () => {
+    if (canContinue()) {
+      setStep(step + 1);
+      // Auto-persist step progress to backend
+      const description = currentAudience.length ? `Audience: ${currentAudience.join(", ")}` : (profile.audience_description || null);
+      void request<Profile>("/agent/profile", {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          ...profile,
+          creator_name: profile.creator_name || null,
+          niche: profile.niche || null,
+          region: profile.region || null,
+          audience: currentAudience,
+          audience_description: description || null,
+        }),
+      }).then((saved) => {
+        onChange(profileForForm(saved));
+      }).catch(() => {});
+    } else {
+      toast.warning("Please complete this step before continuing.");
+    }
+  };
+
   const save = async () => {
     setBusy(true);
     try {
-      const description = audienceTypes.length ? `Audience: ${audienceTypes.join(", ")}` : null;
-      const saved = await request<Profile>("/agent/profile", { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ ...profile, creator_name: profile.creator_name || null, niche: profile.niche || null, region: profile.region || null, audience_description: description || null }) });
+      const description = currentAudience.length ? `Audience: ${currentAudience.join(", ")}` : (profile.audience_description || null);
+      const saved = await request<Profile>("/agent/profile", {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          ...profile,
+          creator_name: profile.creator_name || null,
+          niche: profile.niche || null,
+          region: profile.region || null,
+          audience: currentAudience,
+          audience_description: description || null,
+        }),
+      });
       onChange(profileForForm(saved));
       localStorage.setItem("dealpilot:profile_completed", "true");
       toast.success("Creator profile saved successfully.");
+      onSaved?.();
       onNavigate?.("conversations");
     } catch (err) { toastForError(toast, err, "Unable to save profile"); } finally { setBusy(false); }
   };
@@ -1712,12 +1781,12 @@ function ProfileForm({ profile, onChange, onNavigate }: { profile: Profile; onCh
       <div className="wizard-progress"><span>Step {step + 1} of {profileWizardSteps.length}</span><span>{Math.round(((step + 1) / profileWizardSteps.length) * 100)}% complete</span></div>
       <div className="wizard-progress-bar"><i style={{ width: `${((step + 1) / profileWizardSteps.length) * 100}%` }} /></div>
       <div className="wizard-stepper">{profileWizardSteps.map((label, index) => <button type="button" key={label} className={index === step ? "active" : index < step ? "done" : ""} onClick={() => index <= step && setStep(index)}><span>{index < step ? "✓" : index + 1}</span><b>{label}</b><small>{index === 0 ? "Let’s get to know you" : index === 1 ? "Your reach & community" : index === 2 ? "Where you create" : index === 3 ? "Your country" : "Start exploring"}</small></button>)}</div>
-      <form className="wizard-content" onSubmit={(event) => { event.preventDefault(); if (step < profileWizardSteps.length - 1) { if (canContinue()) setStep(step + 1); else toast.warning("Please complete this step before continuing."); } else void save(); }}>
+      <form className="wizard-content" onSubmit={(event) => { event.preventDefault(); if (step < profileWizardSteps.length - 1) { advanceStep(); } else void save(); }}>
         {step === 0 && <><span className="wizard-required">• Required</span><h2>What’s your primary content niche?</h2><p>Select the option that best describes the type of content you create.</p><div className="wizard-options niche-options">{profileNiches.map((option) => <button type="button" key={option} className={profile.niche === option ? "selected" : ""} onClick={() => update({ niche: option })}><span className="wizard-option-icon">{["🎬", "🎮", "💻", "💄", "🍔", "✈️", "🏋️", "📚", "📊", "💗", "⚽", "🎵", "😊", "💼", "📷", "•••"][profileNiches.indexOf(option)]}</span><b>{option}</b><small>{option === "Technology" ? "Tech reviews, gadgets, AI, software" : option === "Gaming" ? "Gameplay, streaming, esports" : `Create ${option.toLowerCase()} content`}</small>{profile.niche === option && <em>✓</em>}</button>)}</div></>}
-        {step === 1 && <><h2>Who is your audience?</h2><p>Select all the audience groups you reach and tell us how large your community is.</p><div className="wizard-options compact-options">{profileAudiences.map((option) => <button type="button" key={option} className={audienceTypes.includes(option) ? "selected" : ""} onClick={() => setAudienceTypes(audienceTypes.includes(option) ? audienceTypes.filter((item) => item !== option) : [...audienceTypes, option])}><b>{option}</b>{audienceTypes.includes(option) && <em>✓</em>}</button>)}</div><label className="wizard-number-field">Audience size *<input type="number" min="1" value={profile.audience_size ?? ""} onChange={(event) => update({ audience_size: event.target.value ? Number(event.target.value) : null })} placeholder="Enter your audience size" /></label></>}
+        {step === 1 && <><h2>Who is your audience?</h2><p>Select all the audience groups you reach and tell us how large your community is.</p><div className="wizard-options compact-options">{profileAudiences.map((option) => <button type="button" key={option} className={currentAudience.includes(option) ? "selected" : ""} onClick={() => toggleAudience(option)}><b>{option}</b>{currentAudience.includes(option) && <em>✓</em>}</button>)}</div><label className="wizard-number-field">Audience size *<input type="number" min="1" value={profile.audience_size ?? ""} onChange={(event) => update({ audience_size: event.target.value ? Number(event.target.value) : null })} placeholder="Enter your audience size" /></label></>}
         {step === 2 && <><h2>Which platforms do you create on?</h2><p>Select all platforms where you publish content.</p><div className="wizard-options compact-options platform-options">{profilePlatforms.map((option) => <button type="button" key={option} className={profile.platforms.includes(option) ? "selected" : ""} onClick={() => update({ platforms: profile.platforms.includes(option) ? profile.platforms.filter((item) => item !== option) : [...profile.platforms, option] })}><b>{option}</b>{profile.platforms.includes(option) && <em>✓</em>}</button>)}</div></>}
         {step === 3 && <><h2>Where is your audience located?</h2><p>Choose the country that best represents your audience.</p><div className="wizard-options compact-options">{profileLocations.map((option) => <button type="button" key={option} className={profile.region === option ? "selected" : ""} onClick={() => update({ region: option })}><b>{option}</b>{profile.region === option && <em>✓</em>}</button>)}</div></>}
-        {step === 4 && <><h2>Your creator profile is ready.</h2><p>Review your selections. You can update these details later from your Profile tab.</p><div className="wizard-review">{[["Content niche", profile.niche], ["Audience", audienceTypes.join(", ")], ["Audience size", profile.audience_size?.toLocaleString()], ["Platforms", profile.platforms.join(", ")], ["Country", profile.region]].map(([label, value]) => <div key={label}><small>{label}</small><b>{value || "Not provided"}</b></div>)}</div></>}
+        {step === 4 && <><h2>Your creator profile is ready.</h2><p>Review your selections. You can update these details later from your Profile tab.</p><div className="wizard-review">{[["Content niche", profile.niche], ["Audience", currentAudience.join(", ")], ["Audience size", profile.audience_size?.toLocaleString()], ["Platforms", profile.platforms.join(", ")], ["Country", profile.region]].map(([label, value]) => <div key={label}><small>{label}</small><b>{value || "Not provided"}</b></div>)}</div></>}
         <div className="wizard-actions">{step > 0 && <button type="button" className="button secondary" onClick={() => setStep(step - 1)}>← Back</button>}<button className="button primary profile-save-btn" disabled={busy}>{busy ? "Saving…" : step === profileWizardSteps.length - 1 ? "Save profile" : "Continue →"}</button></div>
       </form>
       {requiredComplete && <p className="wizard-edit-note">Your saved details are shown in your profile summary and can be edited here.</p>}
@@ -1735,8 +1804,11 @@ function ProfilePage({
   onNavigate?: (page: Page) => void;
 }) {
   const ready = isProfileComplete(profile);
-  const [editing, setEditing] = useState(!ready);
-  const savedAudience = profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1] || "Not provided";
+  const [editing, setEditing] = useState(!ready || localStorage.getItem("dealpilot:profile_completed") !== "true");
+
+  const savedAudience = (profile.audience && profile.audience.length > 0)
+    ? profile.audience.join(", ")
+    : (profile.audience_description?.match(/(?:^|\n)Audience: ([^\n]+)/)?.[1] || "Not provided");
 
   return (
     <PageFrame
@@ -1744,7 +1816,7 @@ function ProfilePage({
       title="Creator profile"
       subtitle="This profile persists across every conversation and shapes opportunity relevance."
     >
-      {ready && (
+      {ready && !editing && (
         <div className="profile-complete-banner">
           <div>
             <span className="banner-badge">✓ Profile Set Up Complete</span>
@@ -1779,7 +1851,7 @@ function ProfilePage({
         ) : (
           <section className="panel">
             <div className="panel-heading"><div><span className="kicker">{ready ? "Edit profile" : "Profile setup"}</span><h3>{ready ? "Update your creator details" : "Create your creator profile"}</h3></div></div>
-            <ProfileForm profile={profile} onChange={onChange} onNavigate={onNavigate} />
+            <ProfileForm profile={profile} onChange={onChange} onNavigate={onNavigate} onSaved={() => setEditing(false)} />
           </section>
         )}
       </div>
@@ -3438,6 +3510,7 @@ const SUGGESTIONS = [
 ];
 
 function ChatPage({
+  profile,
   conversations,
   onRefresh,
   pendingAction,
@@ -3445,6 +3518,7 @@ function ChatPage({
   onNavigate,
   globalBusyRef,
 }: {
+  profile: Profile;
   conversations: Conversation[];
   onRefresh: () => void;
   pendingAction?: PendingChatAction;
@@ -3467,6 +3541,21 @@ function ChatPage({
   const [statusLabel, setStatusLabel] = useState("");
   const historyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const currentActionRef = useRef<string | null>(null);
+
+  const getBusyWarningMessage = () => {
+    const action = currentActionRef.current;
+    if (action === "opportunities") {
+      return "DealPilot is currently discovering opportunities. Please wait for it to finish before switching or starting a new conversation.";
+    }
+    if (action === "research") {
+      return "Brand research is currently in progress. Please wait for it to complete before switching or starting a new conversation.";
+    }
+    if (action === "fit") {
+      return "Fit evaluation is currently in progress. Please wait for it to complete before switching or starting a new conversation.";
+    }
+    return "DealPilot is currently responding to your message. Please wait for it to finish before switching or starting a new conversation.";
+  };
 
   const stopPolling = () => {
     if (pollingRef.current) {
@@ -3516,7 +3605,13 @@ function ChatPage({
     onClearPendingAction?.();
 
     const executePendingAction = async () => {
+      if (!isProfileComplete(profile)) {
+        toast.warning("Please complete and save your creator profile before starting a conversation.");
+        onNavigate?.("profile");
+        return;
+      }
       setIsBusy(true);
+      currentActionRef.current = action.type;
       // Clear old messages and show typing indicator immediately
       setMessages([]);
       const actionLabel = action.type === "research"
@@ -3714,7 +3809,7 @@ function ChatPage({
 
   const select = (id: string) => {
     if (busyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning(getBusyWarningMessage());
       return;
     }
     localStorage.setItem(storage.session, id);
@@ -3724,8 +3819,13 @@ function ChatPage({
   };
 
   const newChat = () => {
+    if (!isProfileComplete(profile)) {
+      toast.warning("Please complete and save your creator profile before starting a conversation.");
+      onNavigate?.("profile");
+      return;
+    }
     if (busyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning(getBusyWarningMessage());
       return;
     }
     localStorage.removeItem(storage.session);
@@ -3752,6 +3852,11 @@ function ChatPage({
   };
 
   const send = async (value: string) => {
+    if (!isProfileComplete(profile)) {
+      toast.warning("Please complete and save your creator profile before starting a conversation.");
+      onNavigate?.("profile");
+      return;
+    }
     if (busyRef.current) {
       toast.warning("A request is already in progress. Please wait for it to complete before starting another.");
       return;
@@ -3760,6 +3865,20 @@ function ChatPage({
     if (!message) return;
     setInput("");
     setIsBusy(true);
+
+    const lower = message.toLowerCase();
+    if (
+      lower.includes("sponsor") ||
+      lower.includes("opportunity") ||
+      lower.includes("opportunities") ||
+      lower.includes("brand") ||
+      lower.includes("deal") ||
+      lower.includes("find")
+    ) {
+      currentActionRef.current = "opportunities";
+    } else {
+      currentActionRef.current = "chat";
+    }
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -3823,6 +3942,7 @@ function ChatPage({
     } finally {
       setIsFinishedThinking(false);
       setIsBusy(false);
+      currentActionRef.current = null;
     }
   };
 
@@ -3965,25 +4085,45 @@ function ChatPage({
 
         <div className="chat-history" ref={historyRef}>
           {messages.length === 0 && !busy ? (
-            <div className="chat-empty">
-              <span className="kicker dark">Your deal desk</span>
-              <h1>What should we explore next?</h1>
-              <p>
-                Ask about sponsors, brands, creator campaigns, affiliate programs,
-                or partnership fit.
-              </p>
-              <div className="suggestion-chips">
-                {SUGGESTIONS.map((s) => (
+            !isProfileComplete(profile) ? (
+              <div className="chat-empty">
+                <span className="kicker dark">Setup required</span>
+                <h1>Complete your creator profile</h1>
+                <p>
+                  To receive personalized opportunities and start conversations with DealPilot,
+                  your creator profile information must be completed and saved to the database.
+                </p>
+                <div style={{ marginTop: "16px" }}>
                   <button
-                    key={s}
-                    className="suggestion-chip"
-                    onClick={() => void send(s)}
+                    type="button"
+                    className="button primary"
+                    onClick={() => onNavigate?.("profile")}
                   >
-                    {s}
+                    Complete Profile Setup →
                   </button>
-                ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="chat-empty">
+                <span className="kicker dark">Your deal desk</span>
+                <h1>What should we explore next?</h1>
+                <p>
+                  Ask about sponsors, brands, creator campaigns, affiliate programs,
+                  or partnership fit.
+                </p>
+                <div className="suggestion-chips">
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      className="suggestion-chip"
+                      onClick={() => void send(s)}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
           ) : (
             <>
               {messages.map((message, index) => {
@@ -3997,13 +4137,16 @@ function ChatPage({
                 if (isError) {
                   return (
                     <div
-                      className="chat-error-bubble"
+                      className="chat-message assistant error"
                       key={`${message.created_at || index}-${index}`}
                     >
-                      <span className="message-author">DealPilot</span>
+                      <div className="message-header">
+                        <span className="message-author">DealPilot</span>
+                      </div>
                       <div className="message-body">
-                        <span className="chat-error-icon">✕</span>
-                        <div>{displayContent}</div>
+                        <div className="callout warning">
+                          <p>{displayContent}</p>
+                        </div>
                       </div>
                       {message.created_at && (
                         <span className="message-timestamp">
@@ -4053,6 +4196,32 @@ function ChatPage({
           )}
         </div>
 
+        {!isProfileComplete(profile) && (
+          <div
+            style={{
+              padding: "12px 20px",
+              background: "rgba(234, 179, 8, 0.12)",
+              borderTop: "1px solid rgba(234, 179, 8, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+            }}
+          >
+            <span style={{ fontSize: "0.875rem", color: "#eab308" }}>
+              ⚠️ Creator profile must be completed and saved before starting a conversation.
+            </span>
+            <button
+              type="button"
+              className="button primary"
+              style={{ padding: "6px 14px", fontSize: "0.8125rem", whiteSpace: "nowrap" }}
+              onClick={() => onNavigate?.("profile")}
+            >
+              Complete Profile →
+            </button>
+          </div>
+        )}
+
         <form
           className="chat-composer"
           onSubmit={(event) => {
@@ -4063,12 +4232,20 @@ function ChatPage({
           <textarea
             ref={textareaRef}
             value={input}
+            disabled={!isProfileComplete(profile)}
             onChange={autoResize}
             onKeyDown={handleKeyDown}
-            placeholder="Ask DealPilot anything… (Shift+Enter for new line)"
+            placeholder={
+              !isProfileComplete(profile)
+                ? "Complete and save your creator profile to start chatting…"
+                : "Ask DealPilot anything… (Shift+Enter for new line)"
+            }
             rows={1}
           />
-          <button className="send-button" disabled={!input.trim()}>
+          <button
+            className="send-button"
+            disabled={!input.trim() || !isProfileComplete(profile)}
+          >
             ↑
           </button>
         </form>
@@ -4271,19 +4448,23 @@ function AppShell({
   });
 
   const setPage = (newPage: Page) => {
+    if (!isProfileComplete(profile) && newPage !== "profile" && newPage !== "settings") {
+      toast.warning("Please complete and save your creator profile before starting a conversation.");
+      setPageState("profile");
+      return;
+    }
     localStorage.setItem(storage.page, newPage);
     setPageState(newPage);
   };
 
-  // Direct new users to profile page upon initial load
+  // Direct users to profile page if profile is incomplete
   useEffect(() => {
     if (!isProfileComplete(profile)) {
-      const hasCompleted = localStorage.getItem("dealpilot:profile_completed");
-      if (!hasCompleted) {
+      if (page !== "profile" && page !== "settings") {
         setPageState("profile");
       }
     }
-  }, [profile]);
+  }, [profile, page]);
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [targetResearchCompany, setTargetResearchCompany] = useState<string | null>(null);
@@ -4295,8 +4476,13 @@ function AppShell({
   const globalBusyRef = useRef(false);
 
   const handleStartChatAction = (action: PendingChatAction) => {
+    if (!isProfileComplete(profile)) {
+      toast.warning("Please complete and save your creator profile before starting a conversation.");
+      setPage("profile");
+      return;
+    }
     if (globalBusyRef.current) {
-      toast.warning("A research or fit evaluation is currently in progress. Please wait for it to complete.");
+      toast.warning("DealPilot is currently processing a request. Please wait for it to complete before starting another action.");
       return;
     }
     setPendingChatAction(action);
@@ -4370,6 +4556,7 @@ function AppShell({
   if (page === "conversations")
     content = (
       <ChatPage
+        profile={profile}
         conversations={conversations}
         onRefresh={refreshConversations}
         pendingAction={pendingChatAction}
@@ -4550,15 +4737,15 @@ export default function App() {
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handler);
   }, [logout]);
 
-  const loadProfile = async () => {
+  const loadProfile = async (): Promise<Profile> => {
     try {
-      setProfile(
-        profileForForm(
-          await request<Profile>("/agent/profile", { headers: authHeaders() }),
-        ),
-      );
+      const data = await request<Profile>("/agent/profile", { headers: authHeaders() });
+      const p = profileForForm(data);
+      setProfile(p);
+      return p;
     } catch {
       setProfile(emptyProfile);
+      return emptyProfile;
     }
   };
 
@@ -4569,9 +4756,9 @@ export default function App() {
         return;
       }
       request<User>("/auth/me", { headers: authHeaders() })
-        .then((current) => {
+        .then(async (current) => {
+          await loadProfile();
           setUser(current);
-          return loadProfile();
         })
         .catch(() => localStorage.clear())
         .finally(() => setLoading(false));
@@ -4594,9 +4781,9 @@ export default function App() {
           />
         ) : showAuth ? (
           <AuthScreen
-            onLogin={(current) => {
+            onLogin={async (current) => {
+              await loadProfile();
               setUser(current);
-              void loadProfile();
             }}
           />
         ) : (

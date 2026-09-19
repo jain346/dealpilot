@@ -42,6 +42,11 @@ def update_creator_profile(
         exclude_none=True,
     )
 
+    if "audience" in update_data and isinstance(update_data["audience"], list):
+        update_data["audience"] = [
+            str(item).strip() for item in update_data["audience"] if str(item).strip()
+        ]
+
     if "audience_size" in update_data:
         val = update_data["audience_size"]
         if val is not None and (not isinstance(val, int) or val <= 0):

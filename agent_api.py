@@ -165,6 +165,13 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
 
     @router.post("/sessions", response_model=AgentSession, status_code=status.HTTP_201_CREATED)
     async def create_session(current_user: UserInDB = Depends(get_current_user)):
+        profile = load_or_create_creator_profile(current_user.username)
+        missing = profile.missing_required_fields()
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Creator profile must be completed and saved before starting a conversation. Missing fields: {', '.join(missing)}.",
+            )
         session_id = await workflow.create_session(current_user.username)
         return AgentSession(session_id=session_id)
 
@@ -204,6 +211,13 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
         payload: AgentMessage,
         current_user: UserInDB = Depends(get_current_user),
     ):
+        profile = load_or_create_creator_profile(current_user.username)
+        missing = profile.missing_required_fields()
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Creator profile must be completed and saved before starting a conversation. Missing fields: {', '.join(missing)}.",
+            )
         try:
             response = await workflow.run_message(
                 current_user.username, session_id, payload.message
@@ -232,6 +246,13 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
     ):
         if not workflow.user_owns_session(current_user.username, session_id):
             raise HTTPException(status_code=404, detail="Session not found")
+        profile = load_or_create_creator_profile(current_user.username)
+        missing = profile.missing_required_fields()
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Creator profile must be completed and saved before starting a conversation. Missing fields: {', '.join(missing)}.",
+            )
         role = payload.get("role", "assistant")
         content = payload.get("content", "")
         if content:

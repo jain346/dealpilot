@@ -2,6 +2,7 @@ import os
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
+from google.genai import types
 from pydantic import BaseModel, Field
 
 from .parallel_tools import get_parallel_mcp_tools
@@ -24,6 +25,11 @@ class OpportunityInput(BaseModel):
     creator_region: str | None = Field(
         default=None,
         description="Creator's primary geographic market.",
+    )
+
+    audience: list[str] = Field(
+        default_factory=list,
+        description="Target audience groups (e.g. Gen Z, Millennials, Students).",
     )
 
     audience_description: str | None = Field(
@@ -142,21 +148,22 @@ Use the Parallel Search MCP tools.
 
 When calling web_search:
 
+- Issue your web search in EXACTLY ONE tool call to `web_search` by passing 2 to 3 differentiated search queries in the `search_queries` array. Parallel Search runs all queries concurrently in parallel on its end.
+- Do NOT perform sequential searches across multiple turns.
 - Create a specific objective describing what you are trying to discover.
 - Generate a small number of differentiated search queries.
-- Tailor searches to the creator's niche, platform, region, and goal.
+- Tailor searches to the creator's niche, platform, region, audience, and goal.
 - Include recent/current timing when useful.
 - Prefer high-signal searches over broad generic searches.
 - Avoid near-duplicate queries.
 
 The goal is NOT to discover as many companies as possible.
 
-The goal is to discover credible, current, commercially actionable
-opportunities.
+The goal is to discover credible, current, commercially actionable opportunities.
 
-Use web_fetch when a promising result needs verification or when
-important details such as requirements, dates, campaign information,
-or application details need to be confirmed.
+Use `web_fetch` when a promising result needs verification or when important details such as requirements, dates, campaign information, or application details need to be confirmed.
+
+After receiving the search results, produce the complete structured OpportunityOutput.
 
 ## Evidence
 
@@ -209,11 +216,11 @@ If something cannot be verified, leave it unknown.
 
 ## Result Quality
 
-Prefer fewer high-quality opportunities over many weak ones.
+Aim to discover and return a rich set of 6 to 10 distinct commercial opportunities (up to the requested max_opportunities) matching the creator's profile.
 
-Remove duplicate companies discovered through multiple searches.
+Prefer high-quality opportunities with credible evidence.
 
-Return at most the requested max_opportunities.
+Remove duplicate companies discovered across searches.
 
 Rank opportunities primarily by:
 1. evidence strength,
@@ -243,5 +250,9 @@ root_agent = Agent(
     input_schema=OpportunityInput,
     output_schema=OpportunityOutput,
     output_key="last_opportunity_output",
+    generate_content_config=types.GenerateContentConfig(
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        temperature=0.2,
+    ),
     tools=[get_parallel_mcp_tools()],
 )

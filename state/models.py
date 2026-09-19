@@ -10,6 +10,7 @@ class CreatorProfile(BaseModel):
     region: str | None = None
     languages: list[str] = Field(default_factory=list)
 
+    audience: list[str] = Field(default_factory=list)
     audience_description: str | None = None
     audience_size: int | None = None
     average_views: int | None = None
@@ -41,6 +42,7 @@ class CreatorProfileUpdate(BaseModel):
     region: str | None = None
     languages: list[str] | None = None
 
+    audience: list[str] | None = None
     audience_description: str | None = None
     audience_size: int | None = Field(default=None, ge=1)
     average_views: int | None = Field(default=None, ge=0)

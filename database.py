@@ -87,6 +87,8 @@ def init_db() -> None:
 
                 languages TEXT,
 
+                audience TEXT,
+
                 audience_description TEXT,
 
                 audience_size INTEGER,
@@ -234,6 +236,12 @@ def init_db() -> None:
         }
         if "parallel_task_id" in research_columns:
             db.execute("ALTER TABLE brand_research DROP COLUMN parallel_task_id")
+
+        profile_columns = {
+            row[1] for row in db.execute("PRAGMA table_info(creator_profiles)")
+        }
+        if "audience" not in profile_columns:
+            db.execute("ALTER TABLE creator_profiles ADD COLUMN audience TEXT DEFAULT '[]'")
 
         # Clean up duplicates: run as individual execute() calls so they share
         # the same connection transaction.  executescript() issues an implicit
@@ -397,6 +405,7 @@ def get_creator_profile(username: str) -> Optional[dict]:
                 platforms,
                 region,
                 languages,
+                audience,
                 audience_description,
                 audience_size,
                 average_views,
@@ -423,6 +432,12 @@ def get_creator_profile(username: str) -> Optional[dict]:
     profile["languages"] = (
         json.loads(profile["languages"])
         if profile["languages"]
+        else []
+    )
+
+    profile["audience"] = (
+        json.loads(profile["audience"])
+        if profile.get("audience")
         else []
     )
 
@@ -470,6 +485,11 @@ def upsert_creator_profile(
         ensure_ascii=False,
     )
 
+    audience = json.dumps(
+        profile.get("audience", []),
+        ensure_ascii=False,
+    )
+
     raw_audience_size = profile.get("audience_size")
     audience_size = None
     if raw_audience_size is not None:
@@ -496,6 +516,7 @@ def upsert_creator_profile(
                     platforms = ?,
                     region = ?,
                     languages = ?,
+                    audience = ?,
                     audience_description = ?,
                     audience_size = ?,
                     average_views = ?,
@@ -509,6 +530,7 @@ def upsert_creator_profile(
                     platforms,
                     profile.get("region"),
                     languages,
+                    audience,
                     profile.get("audience_description"),
                     audience_size,
                     profile.get("average_views"),
@@ -527,6 +549,7 @@ def upsert_creator_profile(
                     platforms,
                     region,
                     languages,
+                    audience,
                     audience_description,
                     audience_size,
                     average_views,
@@ -534,7 +557,7 @@ def upsert_creator_profile(
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     username,
@@ -543,6 +566,7 @@ def upsert_creator_profile(
                     platforms,
                     profile.get("region"),
                     languages,
+                    audience,
                     profile.get("audience_description"),
                     audience_size,
                     profile.get("average_views"),
