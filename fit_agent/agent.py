@@ -50,6 +50,10 @@ class FitInput(BaseModel):
 
 
 class FitOutput(BaseModel):
+    company_name: str = Field(
+        description="The company being evaluated.",
+    )
+
     overall_score: float = Field(
         ge=0.0,
         le=100.0,

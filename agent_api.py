@@ -1,5 +1,6 @@
 """HTTP models and routes for the authenticated DealPilot workflow."""
 
+import json
 import re
 from typing import Any
 

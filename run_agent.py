@@ -16,6 +16,7 @@ configure_logging()
 from agent_api import create_agent_router
 from auth import router as auth_router
 from auth import services as auth_services
+from database import init_db
 from workflow import DealPilotWorkflow
 
 
@@ -27,6 +28,8 @@ warnings.filterwarnings(
     category=UserWarning,
 )
 
+# Initialize database schema before creating the workflow.
+init_db()
 
 workflow = DealPilotWorkflow()
 

@@ -870,4 +870,4 @@ def delete_fit_result(username: str, fit_id: int) -> bool:
         )
         return cursor.rowcount > 0
 
-init_db()
+
