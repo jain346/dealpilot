@@ -149,7 +149,7 @@ export function ResearchPage({
                 <div>
                   <DetailList label="Partnership Signals" items={selected.creator_partnership_signals} />
                   <DetailList label="Partnership Requirements" items={selected.partnership_requirements} />
-                  <DetailList label="Timeliness / Why Now" items={selected.why_now} />
+                  <DetailList label="Timeliness / Why Now" items={Array.isArray(selected.why_now) ? selected.why_now.filter(Boolean).map((w: any) => typeof w === 'string' ? w : `${w.category || ''}: ${w.explanation || ''}`) : []} />
                   <DetailList label="Risks or Unknowns" items={selected.risks_or_unknowns} />
                 </div>
               </div>

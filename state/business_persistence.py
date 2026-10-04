@@ -43,6 +43,7 @@ def save_opportunity_output(
                         session_id              = ?,
                         company_url             = ?,
                         signal_type             = ?,
+                        opportunity_type        = ?,
                         opportunity_description = ?,
                         requirements            = ?,
                         is_explicit_opportunity = ?,
@@ -58,6 +59,7 @@ def save_opportunity_output(
                         session_id,
                         opportunity.get("company_url"),
                         signal_type,
+                        opportunity.get("opportunity_type"),
                         description,
                         json.dumps(opportunity.get("requirements", [])),
                         int(opportunity.get("is_explicit_opportunity", False)),
@@ -82,6 +84,7 @@ def save_opportunity_output(
                     company_name,
                     company_url,
                     signal_type,
+                    opportunity_type,
                     opportunity_description,
                     requirements,
                     is_explicit_opportunity,
@@ -94,7 +97,7 @@ def save_opportunity_output(
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     username,
@@ -102,6 +105,7 @@ def save_opportunity_output(
                     company_name,
                     opportunity.get("company_url"),
                     signal_type,
+                    opportunity.get("opportunity_type"),
                     description,
                     json.dumps(opportunity.get("requirements", [])),
                     int(opportunity.get("is_explicit_opportunity", False)),

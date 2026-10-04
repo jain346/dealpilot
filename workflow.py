@@ -267,6 +267,132 @@ class DealPilotWorkflow:
         finally:
             self.delete_session(user_id, runner_session_id)
 
+    async def generate_action(
+        self,
+        user_id: str,
+        opportunity_id: int,
+    ) -> dict:
+        """Generate a pitch/strategy/negotiation action for an opportunity.
+
+        This calls the Action Agent directly with fully structured input,
+        bypassing the Director Agent to guarantee correct formatting and
+        opportunity-type-specific branching.
+        """
+        from state.profile import load_or_create_creator_profile
+        from action_agent.agent import ActionInput, root_agent as _action_agent
+
+        opportunity = get_opportunity(user_id, opportunity_id)
+        if opportunity is None:
+            raise WorkflowSessionNotFound
+
+        profile = load_or_create_creator_profile(user_id)
+
+        # Build brand_context from research if available
+        existing_research = next(
+            (item for item in list_brand_research(user_id)
+             if item.get("opportunity_id") == opportunity_id
+             and item.get("status") == "COMPLETED"),
+            None,
+        )
+
+        brand_context_parts = [opportunity.get("opportunity_description", "")]
+        if opportunity.get("why_relevant"):
+            brand_context_parts.append(f"Why relevant: {opportunity['why_relevant']}")
+        if opportunity.get("why_now"):
+            brand_context_parts.append(f"Why now: {opportunity['why_now']}")
+        if existing_research:
+            if existing_research.get("summary"):
+                brand_context_parts.append(f"Research summary: {existing_research['summary']}")
+            signals = existing_research.get("creator_partnership_signals") or []
+            if isinstance(signals, list) and signals:
+                brand_context_parts.append(f"Partnership signals: {'; '.join(str(s) for s in signals)}")
+
+        opp_type = opportunity.get("opportunity_type") or "INFERRED"
+
+        action_input = ActionInput(
+            opportunity_type=opp_type,
+            company_name=opportunity["company_name"],
+            creator_niche=profile.niche or "general",
+            creator_platform=", ".join(profile.platforms) if profile.platforms else "unknown",
+            audience_size=profile.audience_size or 0,
+            brand_context=" | ".join(brand_context_parts),
+        )
+
+        # Run the Action Agent directly in a temporary session
+        runner_session_id = await self.create_session(user_id)
+        try:
+            input_message = types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=json.dumps(action_input.model_dump()))],
+            )
+
+            responses: list[str] = []
+            async for event in self.runner.run_async(
+                user_id=user_id,
+                session_id=runner_session_id,
+                new_message=input_message,
+            ):
+                if (
+                    event.is_final_response()
+                    and event.content
+                    and event.content.parts
+                ):
+                    responses.extend(
+                        part.text for part in event.content.parts if part.text
+                    )
+
+            raw_response = "".join(responses)
+
+            # Try to extract the structured action output from session state
+            session_after = await self.session_service.get_session(
+                app_name=self.app_name,
+                user_id=user_id,
+                session_id=runner_session_id,
+            )
+            after_state = dict(session_after.state) if session_after else {}
+            action_raw = after_state.get("last_action_output")
+
+            if action_raw:
+                parsed = _parse_agent_output(action_raw)
+                if parsed:
+                    return {
+                        "opportunity_id": opportunity_id,
+                        "opportunity_type": opp_type,
+                        "company_name": opportunity["company_name"],
+                        "action_type": parsed.get("action_type", "PITCH_EMAIL"),
+                        "subject_line": parsed.get("subject_line"),
+                        "content": parsed.get("content", ""),
+                        "explanation": parsed.get("explanation", ""),
+                    }
+
+            # Fallback: try parsing the raw text response as JSON
+            try:
+                parsed_response = json.loads(raw_response)
+                return {
+                    "opportunity_id": opportunity_id,
+                    "opportunity_type": opp_type,
+                    "company_name": opportunity["company_name"],
+                    "action_type": parsed_response.get("action_type", "PITCH_EMAIL"),
+                    "subject_line": parsed_response.get("subject_line"),
+                    "content": parsed_response.get("content", raw_response),
+                    "explanation": parsed_response.get("explanation", ""),
+                }
+            except (json.JSONDecodeError, AttributeError):
+                pass
+
+            # Last fallback: return the raw text as content
+            return {
+                "opportunity_id": opportunity_id,
+                "opportunity_type": opp_type,
+                "company_name": opportunity["company_name"],
+                "action_type": "PITCH_EMAIL" if opp_type in ("SPONSORSHIP", "INFERRED", "AMBASSADOR") else "INTEGRATION_STRATEGY",
+                "subject_line": None,
+                "content": raw_response,
+                "explanation": "",
+            }
+        finally:
+            self.delete_session(user_id, runner_session_id)
+
     async def run_message(
         self,
         user_id: str,

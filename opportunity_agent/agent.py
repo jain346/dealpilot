@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
@@ -61,9 +62,19 @@ class OpportunityInput(BaseModel):
     )
 
 
+class OpportunityType(str, Enum):
+    SPONSORSHIP = "SPONSORSHIP"
+    AFFILIATE = "AFFILIATE"
+    AMBASSADOR = "AMBASSADOR"
+    INFERRED = "INFERRED"
+
 class Opportunity(BaseModel):
     company_name: str
     company_url: str | None = None
+    
+    opportunity_type: OpportunityType = Field(
+        description="The categorization of the opportunity type (e.g. SPONSORSHIP vs AFFILIATE)."
+    )
 
     signal_type: str
     opportunity_description: str

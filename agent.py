@@ -13,6 +13,7 @@ from google.genai import types
 from opportunity_agent.agent import root_agent as opportunity_agent
 from brand_research_agent.agent import root_agent as brand_research_agent
 from fit_agent.agent import root_agent as fit_agent
+from action_agent.agent import root_agent as action_agent
 
 from google.adk.tools import ToolContext
 
@@ -134,6 +135,17 @@ It evaluates:
 * Overall suitability
 
 It returns a structured fit score, recommendation, strengths, concerns, and reasoning.
+
+### 4. action_agent
+
+Use this agent to generate concrete commercial actions for the creator.
+
+It takes a discovered opportunity, its type, and context, and produces:
+- A personalized cold pitch email (for SPONSORSHIP and INFERRED opportunities).
+- An affiliate integration strategy or negotiation email (for AFFILIATE programs).
+- A long-term pitch (for AMBASSADOR programs).
+
+Call this when the user asks to "draft a pitch", "how should I reach out?", or "write an email" for a specific company.
 
 ---
 
@@ -279,6 +291,37 @@ Action: Call `opportunity_agent` -> Pick top 1-2 companies -> Call `brand_resear
 **Example 6: Compare Companies**
 User: "Compare ElevenLabs and Adobe"
 Action: Call `brand_research_agent` for both -> Call `fit_agent` for both -> Compare based on fit.
+
+**Example 7: Draft a Pitch / Action Plan**
+User: "Draft a pitch for ElevenLabs"
+State: Research and opportunity info available.
+Action: Call `action_agent` with the company details -> Return the generated pitch/strategy formatted cleanly in Markdown. Do NOT output raw JSON blocks to the user.
+Adapt your format based on the `action_type` returned:
+
+If it is an EMAIL (PITCH_EMAIL or NEGOTIATION_EMAIL), format exactly like this:
+```markdown
+Here is a tailored cold email template you can use...
+
+### Subject Line Options
+- [Subject Line]
+
+### Email Draft
+[Email Body from content]
+
+### Tips for Outreach
+[Explanation of why this strategy works and tips for sending]
+```
+
+If it is a STRATEGY (INTEGRATION_STRATEGY), format exactly like this:
+```markdown
+Here is a tailored integration strategy for this opportunity...
+
+### Integration Strategy
+[Strategy Body from content]
+
+### Why this works
+[Explanation of why this specific strategy was chosen]
+```
 
 ---
 
@@ -564,10 +607,10 @@ Do not expose internal orchestration details unless useful to the user.
 Do not mention internal tool names, MCP implementation details, or hidden system mechanics in normal user-facing responses.
 
 Your goal is to help the creator move from:
-
 **discover → research → evaluate → prioritize**
-
 with the minimum unnecessary work and maximum evidence quality.
+
+CRITICAL: Never output raw JSON tool results to the user (e.g. from the action_agent or fit_agent). Always format the result beautifully in conversational text or Markdown.
 """
 
 
@@ -585,6 +628,7 @@ root_agent = Agent(
         opportunity_agent,
         brand_research_agent,
         fit_agent,
+        action_agent,
     ],
    before_model_callback=bootstrap_creator_profile,
 

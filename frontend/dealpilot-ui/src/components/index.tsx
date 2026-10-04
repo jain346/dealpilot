@@ -297,13 +297,14 @@ export function DeleteAction({
 
 /* ── Detail List ─────────────────────────────── */
 
-export function DetailList({ label, items }: { label: string; items: string[] }) {
-  return items.length ? (
+export function DetailList({ label, items }: { label: string; items: any[] }) {
+  const safeItems = Array.isArray(items) ? items : [];
+  return safeItems.length ? (
     <div className="detail-list">
       <strong>{label}</strong>
       <ul>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {safeItems.map((item, i) => (
+          <li key={i}>{String(item)}</li>
         ))}
       </ul>
     </div>
@@ -316,12 +317,14 @@ export function SignalCard({
   opportunity,
   onResearch,
   onFit,
+  onPitch,
   isResearched = false,
   onFitDisabled,
 }: {
   opportunity: Opportunity;
   onResearch?: () => void;
   onFit?: () => void;
+  onPitch?: () => void;
   isResearched?: boolean;
   onFitDisabled?: () => void;
 }) {
@@ -386,6 +389,11 @@ export function SignalCard({
               </p>
             )}
             <p className="signal-company-status">
+              {opportunity.opportunity_type && (
+                <span className="status-pill" style={{ marginRight: 8, background: 'var(--slate-8)', color: 'var(--slate-1)' }}>
+                  {opportunity.opportunity_type}
+                </span>
+              )}
               {truncate(opportunity.signal_type || "Creator partnership activity detected", 64)}
             </p>
           </div>
@@ -417,7 +425,7 @@ export function SignalCard({
         </div>
       </div>
 
-      {(onResearch || onFit) && (
+      {(onResearch || onFit || onPitch) && (
         <div className="signal-actions">
           {onResearch && (
             <button
@@ -453,6 +461,20 @@ export function SignalCard({
               Evaluate fit
             </button>
           )}
+          {onPitch && (
+            <button
+              type="button"
+              className="btn-evaluate-fit"
+              style={{ background: "var(--indigo-6)", borderColor: "var(--indigo-6)", color: "white" }}
+              title="Draft Pitch / Strategy"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPitch();
+              }}
+            >
+              {opportunity.opportunity_type === "AFFILIATE" ? "Get strategy" : "Draft pitch"}
+            </button>
+          )}
         </div>
       )}
     </article>
@@ -482,7 +504,7 @@ function parseOpportunityJson(text: string): { cleanedText: string; opportunitie
 
   const extractFromArr = (arr: any[]) => {
     for (const item of arr) {
-      if (item && typeof item === "object" && item.company_name) {
+      if (item && typeof item === "object" && item.company_name && item.signal_type) {
         opportunities.push({
           company_name: String(item.company_name),
           company_url: item.company_url ? String(item.company_url) : undefined,
@@ -542,7 +564,7 @@ function parseOpportunityJson(text: string): { cleanedText: string; opportunitie
           if (parsed && typeof parsed === "object") {
             let found = false;
             if (Array.isArray(parsed.opportunities)) { extractFromArr(parsed.opportunities); found = true; }
-            else if (parsed.company_name) { extractFromArr([parsed]); found = true; }
+            else if (parsed.company_name && parsed.signal_type) { extractFromArr([parsed]); found = true; }
             if (found) { i = endIdx + 1; continue; }
           }
         } catch { /* not valid JSON */ }

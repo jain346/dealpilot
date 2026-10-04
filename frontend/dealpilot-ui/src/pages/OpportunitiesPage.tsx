@@ -70,8 +70,8 @@ export function OpportunitiesPage({
     } catch (err) { toastForError(toast, err, "Unable to load opportunity"); }
   };
 
-  const runAction = (type: "research" | "fit", item: Opportunity) => {
-    onStartChatAction?.({ type, opportunityId: item.id, companyName: item.company_name });
+  const runAction = (type: "research" | "fit" | "pitch", item: Opportunity) => {
+    onStartChatAction?.({ type, opportunityId: item.id, companyName: item.company_name, opportunityType: item.opportunity_type || undefined });
   };
 
   const filteredItems = items.filter((item) => {
@@ -111,7 +111,7 @@ export function OpportunitiesPage({
           <div className="signal-stack">
             {paginatedItems.map((item) => (
               <div className="unstyled-card" role="button" tabIndex={0} key={item.id} onClick={() => void select(item.id)} onKeyDown={(event) => { if (event.key === "Enter") void select(item.id); }}>
-                <SignalCard opportunity={item} onResearch={() => runAction("research", item)} onFit={() => runAction("fit", item)} isResearched={isOpportunityResearched(item)} onFitDisabled={() => toast.info("Firstly research has to be performed, after that fit analysis will be done.")} />
+                <SignalCard opportunity={item} onResearch={() => runAction("research", item)} onFit={() => runAction("fit", item)} onPitch={() => runAction("pitch", item)} isResearched={isOpportunityResearched(item)} onFitDisabled={() => toast.info("Firstly research has to be performed, after that fit analysis will be done.")} />
               </div>
             ))}
           </div>
@@ -186,6 +186,7 @@ export function OpportunitiesPage({
                 </div>
               )}
               <div style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button className="button secondary" onClick={() => { const item = selected; setSelected(null); runAction("pitch", item); }}>Draft pitch</button>
                 <button className="button secondary" onClick={() => { const item = selected; setSelected(null); runAction("research", item); }}>Research brand</button>
                 <button className={`button primary ${!isOpportunityResearched(selected) ? "disabled-btn" : ""}`} aria-disabled={!isOpportunityResearched(selected)} title={!isOpportunityResearched(selected) ? "Research must be performed before fit analysis" : "Evaluate fit"} onClick={() => { const item = selected; if (!isOpportunityResearched(item)) { toast.info("Firstly research has to be performed, after that fit analysis will be done."); return; } setSelected(null); runAction("fit", item); }}>Evaluate fit</button>
               </div>

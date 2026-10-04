@@ -3,7 +3,7 @@
    ================================================================ */
 
 import { useState, useEffect, useRef } from "react";
-import type { Profile, Conversation, Message, Page, PendingChatAction, Research, FitResult, ResponsePayload } from "../types";
+import type { Profile, Conversation, Message, Page, PendingChatAction, Research, FitResult, ResponsePayload, ActionResult } from "../types";
 import { useToast } from "../context/ToastContext";
 import { request, authHeaders, toastForError, responseText } from "../api/client";
 import { storage } from "../api/client";
@@ -90,7 +90,7 @@ export function ChatPage({
       setIsBusy(true);
       currentActionRef.current = action.type;
       setMessages([]);
-      const actionLabel = action.type === "research" ? `Researching ${action.companyName}…` : `Evaluating fit for ${action.companyName}…`;
+      const actionLabel = action.type === "research" ? `Researching ${action.companyName}…` : action.type === "pitch" ? `Drafting pitch for ${action.companyName}…` : `Evaluating fit for ${action.companyName}…`;
       setStatusLabel(actionLabel);
 
       try {
@@ -99,10 +99,12 @@ export function ChatPage({
         setSession(activeSessionId);
         localStorage.setItem(storage.session, activeSessionId);
 
-        const userPrompt = action.type === "research" ? `Research brand: ${action.companyName}` : `Evaluate fit for brand: ${action.companyName}`;
+        const userPrompt = action.type === "research" ? `Research brand: ${action.companyName}` : action.type === "pitch" ? `Draft a pitch for ${action.companyName}` : `Evaluate fit for brand: ${action.companyName}`;
         setMessages([{ role: "user", content: userPrompt, created_at: new Date().toISOString() }]);
 
-        await request(`/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ role: "user", content: userPrompt }) }).catch(() => {});
+        if (action.type !== "pitch") {
+          await request(`/agent/sessions/${encodeURIComponent(activeSessionId)}/custom_message`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ role: "user", content: userPrompt }) }).catch(() => {});
+        }
 
         let assistantContent = "";
         if (action.type === "research" && action.opportunityId) {
@@ -117,6 +119,25 @@ export function ChatPage({
           setStatusLabel(`Evaluating brand fit for ${action.companyName}…`);
           const res = await request<FitResult>(`/agent/research/${action.researchId}/fit?session_id=${encodeURIComponent(activeSessionId)}`, { method: "POST", headers: authHeaders() });
           assistantContent = `### ◒ Creator-Brand Fit Analysis: ${res.company_name}\n\n**Overall Fit Score:** ${Math.round(res.overall_score)}%\n**Recommendation:** ${res.recommendation}\n\n**Reasoning:** ${res.reasoning}\n\n**Key Strengths:** ${(res.strengths || []).join(", ") || "N/A"}\n\n🔗 [View full Fit Analysis Page for ${res.company_name}](#fit/${encodeURIComponent(res.company_name)})`;
+        } else if (action.type === "pitch" && action.opportunityId) {
+          setStatusLabel(`Generating ${(action.opportunityType === "AFFILIATE" ? "integration strategy" : "pitch")} for ${action.companyName}…`);
+          const res = await request<ActionResult>(`/agent/opportunities/${action.opportunityId}/action`, { method: "POST", headers: authHeaders() });
+
+          // Clean up HTML line breaks the LLM might hallucinate
+          const cleanContent = res.content.replace(/<br\s*\/?>/gi, '\n');
+          
+          // Only show explanation section if there's actually an explanation to show
+          const explanationSection = res.explanation ? `\n\n---\n\n### 💡 ${res.action_type === "INTEGRATION_STRATEGY" ? "Why This Strategy Works" : "Tips for Outreach"}\n\n${res.explanation}` : "";
+
+          // Format the structured result into beautiful markdown based on action_type
+          if (res.action_type === "INTEGRATION_STRATEGY") {
+            assistantContent = `### 🔗 Integration Strategy: ${res.company_name}\n\n**Opportunity Type:** ${res.opportunity_type}\n\n${cleanContent}${explanationSection}`;
+          } else if (res.action_type === "NEGOTIATION_EMAIL") {
+            assistantContent = `### 📧 Negotiation Email: ${res.company_name}\n\n**Opportunity Type:** ${res.opportunity_type}${res.subject_line ? `\n\n**Subject Line:** ${res.subject_line}` : ""}\n\n---\n\n${cleanContent}${explanationSection}`;
+          } else {
+            // PITCH_EMAIL
+            assistantContent = `### 📧 Cold Pitch Email: ${res.company_name}\n\n**Opportunity Type:** ${res.opportunity_type}${res.subject_line ? `\n\n**Subject Line:** ${res.subject_line}` : ""}\n\n---\n\n${cleanContent}${explanationSection}`;
+          }
         }
 
         if (assistantContent) {

@@ -1,4 +1,5 @@
 import os
+import typing
 from typing import Literal
 
 from google.adk.agents.llm_agent import Agent
@@ -35,7 +36,7 @@ class BrandResearchSummary(BaseModel):
         default_factory=list
     )
 
-    why_now: list[str] = Field(
+    why_now: list[typing.Any] = Field(
         default_factory=list
     )
 

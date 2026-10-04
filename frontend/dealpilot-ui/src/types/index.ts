@@ -33,6 +33,7 @@ export type Opportunity = {
   company_url?: string | null;
   signal_type: string;
   opportunity_description: string;
+  opportunity_type?: string;
   requirements: string[];
   is_explicit_opportunity: boolean;
   why_relevant: string;
@@ -58,7 +59,7 @@ export type Research = {
   recent_activity: string[];
   creator_partnership_signals: string[];
   partnership_requirements: string[];
-  why_now: string[];
+  why_now: any[];
   evidence: { [key: string]: unknown }[];
   risks_or_unknowns: string[];
   confidence?: number | null;
@@ -85,11 +86,22 @@ export type FitResult = {
   updated_at: string;
 };
 
+export type ActionResult = {
+  opportunity_id: number;
+  opportunity_type: string;
+  company_name: string;
+  action_type: string;
+  subject_line?: string | null;
+  content: string;
+  explanation: string;
+};
+
 export type PendingChatAction = {
-  type: "research" | "fit";
+  type: "research" | "fit" | "pitch";
   opportunityId?: number;
   researchId?: number;
   companyName: string;
+  opportunityType?: string;
 } | null;
 
 export type ToastSeverity = "success" | "error" | "warning" | "info";

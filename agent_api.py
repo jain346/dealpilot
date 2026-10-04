@@ -67,6 +67,7 @@ class OpportunityItem(BaseModel):
     company_url: str | None = None
 
     signal_type: str
+    opportunity_type: str | None = None
     opportunity_description: str
 
     requirements: list[str] = Field(default_factory=list)
@@ -107,7 +108,7 @@ class ResearchItem(BaseModel):
 
     creator_partnership_signals: list[str] = Field(default_factory=list)
     partnership_requirements: list[str] = Field(default_factory=list)
-    why_now: list[str] = Field(default_factory=list)
+    why_now: list[dict[str, Any]] = Field(default_factory=list)
 
     evidence: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -146,6 +147,15 @@ class FitItem(BaseModel):
     created_at: str
     updated_at: str
 
+
+class ActionItem(BaseModel):
+    opportunity_id: int
+    opportunity_type: str
+    company_name: str
+    action_type: str
+    subject_line: str | None = None
+    content: str
+    explanation: str
 
 
 def normalize_agent_response(raw_response: str) -> dict[str, Any]:
@@ -352,6 +362,25 @@ def create_agent_router(workflow: DealPilotWorkflow) -> APIRouter:
         if fit is None:
             raise HTTPException(status_code=404, detail="Fit result not found")
         return fit
+
+    @router.post(
+        "/opportunities/{opportunity_id}/action",
+        response_model=ActionItem,
+    )
+    async def generate_action(
+        opportunity_id: int,
+        current_user: UserInDB = Depends(get_current_user),
+    ):
+        try:
+            result = await workflow.generate_action(
+                current_user.username,
+                opportunity_id,
+            )
+        except WorkflowSessionNotFound:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        except RuntimeError as error:
+            raise HTTPException(status_code=502, detail=str(error))
+        return result
 
     @router.get(
     "/research",

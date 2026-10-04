@@ -118,6 +118,7 @@ def init_db() -> None:
                 company_url TEXT,
 
                 signal_type TEXT NOT NULL,
+                opportunity_type TEXT,
                 opportunity_description TEXT NOT NULL,
 
                 requirements TEXT NOT NULL DEFAULT '[]',
