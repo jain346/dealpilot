@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 from google.adk.agents.llm_agent import Agent
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -47,6 +48,18 @@ class Source(BaseModel):
     relevance: str
 
 
+class WhyNowCategory(str, Enum):
+    NEW_PRODUCT_LAUNCH = "NEW_PRODUCT_LAUNCH"
+    ACTIVE_CAMPAIGN = "ACTIVE_CAMPAIGN"
+    EXPANDING_MARKET = "EXPANDING_MARKET"
+    EVERGREEN = "EVERGREEN"
+
+
+class WhyNowItem(BaseModel):
+    category: WhyNowCategory = Field(description="Categorization of the urgency")
+    explanation: str = Field(description="Brief explanation of why this category applies")
+
+
 class BrandResearchOutput(BaseModel):
     company_name: str
     official_website: str | None = None
@@ -77,7 +90,7 @@ class BrandResearchOutput(BaseModel):
         default_factory=list
     )
 
-    why_now: list[str] = Field(
+    why_now: list[WhyNowItem] = Field(
         default_factory=list
     )
 
@@ -234,7 +247,7 @@ root_agent = Agent(
     output_schema=BrandResearchOutput,
     output_key="last_brand_research_output",
     generate_content_config=types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        thinking_config=types.ThinkingConfig(thinking_budget=1024),
         temperature=0.2,
     ),
     tools=[get_parallel_task_mcp_tools()],

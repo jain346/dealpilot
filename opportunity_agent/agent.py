@@ -161,6 +161,14 @@ The goal is NOT to discover as many companies as possible.
 
 The goal is to discover credible, current, commercially actionable opportunities.
 
+**Search Query Examples (Google Dorks):**
+- BAD: `tech sponsorships 2026`
+- GOOD: `intitle:"ambassador program" OR inurl:"affiliate" "consumer tech" "apply"`
+- BAD: `gaming brand deals`
+- GOOD: `"creator program" OR "influencer application" "gaming setup" -site:pinterest.com`
+- BAD: `fitness companies looking for creators`
+- GOOD: `inurl:"/partners" OR inurl:"/affiliates" "fitness apparel"`
+
 Use `web_fetch` when a promising result needs verification or when important details such as requirements, dates, campaign information, or application details need to be confirmed.
 
 After receiving the search results, produce the complete structured OpportunityOutput.
@@ -175,6 +183,9 @@ For every included opportunity:
 - explain why it may be relevant,
 - explain why it may be timely,
 - preserve supporting source URLs.
+
+**CRITICAL URL RULES:**
+Do NOT guess or hallucinate URLs. You must ONLY output URLs that were explicitly returned in the Parallel Search results. If you cannot find a specific deep link to the campaign or program, return the root domain and clearly state that the specific URL was not found.
 
 Distinguish between:
 
@@ -251,7 +262,7 @@ root_agent = Agent(
     output_schema=OpportunityOutput,
     output_key="last_opportunity_output",
     generate_content_config=types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        thinking_config=types.ThinkingConfig(thinking_budget=1024),
         temperature=0.2,
     ),
     tools=[get_parallel_mcp_tools()],
