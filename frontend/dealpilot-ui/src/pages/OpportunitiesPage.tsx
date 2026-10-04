@@ -13,7 +13,6 @@ import {
 } from "../components";
 
 export function OpportunitiesPage({
-  onNavigate,
   onStartChatAction,
 }: {
   onNavigate?: (page: Page, company?: string) => void;

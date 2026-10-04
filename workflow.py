@@ -35,6 +35,7 @@ from state.business_persistence import (
     save_brand_research_job,
     save_fit_output,
 )
+from workflow_parser import parse_agent_output
 
 TRACKED_OUTPUT_KEYS = (
     "last_opportunity_output",
@@ -42,45 +43,9 @@ TRACKED_OUTPUT_KEYS = (
     "last_fit_output",
 )
 
-def _parse_agent_output(value):
-        """
-        Convert an ADK output_key value into a Python dict.
+# Maintain alias for backward compatibility
+_parse_agent_output = parse_agent_output
 
-        Structured specialist outputs may arrive in state as a JSON string.
-        """
-        if value is None:
-            return None
-
-        if isinstance(value, dict):
-            return value
-
-        if isinstance(value, str):
-            text = value.strip()
-
-            if not text:
-                return None
-
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError:
-                fenced = text.replace("```json", "").replace("```", "").strip()
-                try:
-                    return json.loads(fenced)
-                except json.JSONDecodeError:
-                    start = fenced.find("{")
-                    end = fenced.rfind("}")
-                    if start >= 0 and end > start:
-                        try:
-                            return json.loads(fenced[start : end + 1])
-                        except json.JSONDecodeError:
-                            pass
-                    logger.warning(
-                        "agent_output_not_json",
-                        extra={"output_chars": len(text)},
-                    )
-                    return None
-
-        return None
 
 class WorkflowSessionNotFound(Exception):
     """Raised when a user tries to use a session they do not own."""
@@ -212,7 +177,7 @@ class DealPilotWorkflow:
             response = await self.run_message(
                 user_id,
                 runner_session_id,
-                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}.Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}. Known source URLs already found during opportunity discovery — use these as a starting point instead of resolving the company from scratch: {', '.join(opportunity.get('source_urls') or []) or 'none available'}.",
+                f"Research this specific opportunity using the brand_research_agent, then persist its structured result. Do not discover other companies. Opportunity ID: {opportunity_id}. Company: {opportunity['company_name']}. Official URL: {opportunity.get('company_url') or 'unknown'}. Opportunity context: {opportunity['opportunity_description']}. Known source URLs already found during opportunity discovery — use these as a starting point instead of resolving the company from scratch: {', '.join(opportunity.get('source_urls') or []) or 'none available'}.",
                 opportunity_id=opportunity_id,
                 persist_session_id=target_session_id,
             )

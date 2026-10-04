@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import type { Page, Opportunity } from "../types";
 import { useToast } from "../context/ToastContext";
 import { request, authHeaders, toastForError } from "../api/client";
-import { relativeTime, formatConfidence } from "../utils/format";
+import { relativeTime } from "../utils/format";
 import { markdownHtml } from "../utils/markdown";
 
 /* ── Logo ──────────────────────────────────────── */
